@@ -1,0 +1,24 @@
+# Restricted NIST SD302 data - keep local only
+sd302a/
+sd302b/
+sd302d/
+ebts/
+data/
+
+# Generated slide/image exports and local artifacts
+extracted-slide-assets/
+*.zip
+
+# Notebook/runtime noise
+.ipynb_checkpoints/
+__pycache__/
+*.pyc
+
+# Environment files
+.env
+.venv/
+venv/
+
+# OS/editor files
+.DS_Store
+Thumbs.db
