@@ -1,4 +1,4 @@
-# Dermatoglyphic Pattern Recognition
+# Automation of Dermatoglyphic Pattern Recognition and Quantification Through Machine Learning
 
 This project prepares NIST SD302 fingerprint records for dermatoglyphic pattern classification.
 
