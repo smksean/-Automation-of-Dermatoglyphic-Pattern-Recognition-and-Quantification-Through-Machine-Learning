@@ -1,0 +1,5 @@
+experiment,evaluation_protocol,evaluated_images,accuracy,macro_f1
+HOG + Linear SVM,fixed subject-disjoint test,348,0.4252873563,0.3569705749
+Custom CNN,fixed subject-disjoint test,348,0.5890804598,0.5715659859
+ResNet-18,subject-disjoint test,349,0.8166189112,0.7601891310
+EfficientNet-B0,5-fold grouped out-of-fold,1281,0.9172521468,0.8890106145

@@ -9,6 +9,13 @@ data/
 extracted-slide-assets/
 *.zip
 
+# Trained weights and serialized models
+models/
+*.joblib
+*.pth
+*.pt
+*.ckpt
+
 # Notebook/runtime noise
 .ipynb_checkpoints/
 __pycache__/
