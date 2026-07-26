@@ -10,13 +10,25 @@ The strongest completed experiment uses an ImageNet-pretrained EfficientNet-B0 m
 
 The study addresses the following objectives:
 
-1. Extract structured fingerprint pattern annotations from SD 302g EBTS field `9.307`.
-2. Link examiner-supplied annotations to rolled fingerprint impressions.
-3. Quantify class balance, capture conditions, and annotation ambiguity.
-4. Establish leakage-resistant classical and deep-learning baselines.
-5. Compare custom CNN training with transfer-learning architectures.
-6. Preserve a subject-disjoint locked holdout for final model assessment.
-7. Investigate the feasibility of detailed arch and whorl subclass classification.
+1. Develop a machine-learning model for classifying rolled fingerprint images into four broad dermatoglyphic patterns: arch, left-slant loop, right-slant loop, and whorl.
+2. Compare the performance of classical machine learning, a custom convolutional neural network, and transfer-learning architectures for fingerprint-pattern classification.
+3. Evaluate model generalisation using subject-disjoint data partitions that prevent identity leakage.
+4. Determine the best-performing approach using accuracy, precision, recall, macro-averaged F1 score, and class-level performance.
+5. Investigate the principal classification errors and the influence of class imbalance on minority-pattern recognition.
+6. Explore whether the available examiner-supplied annotations support preliminary discrimination of selected arch and whorl subtypes.
+
+## Research Questions
+
+The primary research question is:
+
+> To what extent can classical machine-learning and deep-learning approaches accurately classify rolled fingerprint images into broad dermatoglyphic pattern classes under subject-disjoint evaluation?
+
+The supporting research questions are:
+
+1. How does a custom CNN compare with HOG-based machine learning and pretrained transfer-learning models?
+2. Which broad fingerprint classes are most difficult to distinguish?
+3. How do class imbalance and annotation ambiguity affect classification performance?
+4. Do the available confirmed annotations provide sufficient preliminary evidence for distinguishing selected arch and whorl subtypes?
 
 ## Dataset and Annotation Structure
 
@@ -33,6 +45,10 @@ Detailed subtypes are retained where present: plain arch, tented arch, plain who
 
 The NIST SD 302 data are not distributed through this repository. Access is subject to the terms established by NIST.
 
+### Annotation Preparation
+
+Examiner-supplied pattern annotations were extracted from field `9.307` of the SD 302g EBTS records and linked to corresponding rolled fingerprint impressions. This extraction and linkage procedure constitutes dataset preparation rather than an independent research objective.
+
 ## Experimental Design and Leakage Control
 
 Data leakage is controlled through the following measures:
@@ -43,6 +59,8 @@ Data leakage is controlled through the following measures:
 - the EfficientNet development set excludes 60 subjects used by earlier experiments;
 - a further 30-subject, 334-image holdout remains locked and has not been used for model selection;
 - subject-level predictions, biometric images, model weights, and redistribution-restricted archives are excluded from GitHub.
+
+Subject-disjoint partitioning and locked-holdout construction form part of the experimental methodology used to support credible evaluation; they are not treated as separate research outcomes.
 
 The EfficientNet dataset is partitioned by experiment role:
 
@@ -126,7 +144,7 @@ The [`results`](results/) directory contains aggregate classification reports, f
 
 The source annotations provide exact subclasses for only a minority of arch and whorl records. A metadata audit established that 59 of the 827 initially flagged records can be resolved conservatively from direct subtype annotations or consistent same-finger evidence. The remaining generic or alternative classifications require expert visual assessment if definitive single-label subtype ground truth is required.
 
-Subclass modelling should therefore initially:
+Subclass modelling is treated as an exploratory secondary analysis rather than a validated system for identifying every arch and whorl subtype. It should initially:
 
 - retain exact original subtype annotations;
 - model alternative classifications as multi-label evidence;
