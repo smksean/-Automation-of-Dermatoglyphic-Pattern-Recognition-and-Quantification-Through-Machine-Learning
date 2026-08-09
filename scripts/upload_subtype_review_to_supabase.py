@@ -169,10 +169,33 @@ def main() -> None:
             batch, on_conflict="review_id"
         ).execute()
 
+    # Rebuild the shared CSV from the complete remote state, not just this
+    # upload selection. This preserves saved answers when expanding a pilot to
+    # the full package (and also keeps later partial re-runs non-destructive).
+    remote_items = (
+        client.table("review_items")
+        .select(
+            "review_id,record_key,image_path,current_main_type,"
+            "source_primary_code,recorded_pattern_codes,"
+            "alternative_type_warning,permitted_subtypes"
+        )
+        .order("review_id")
+        .execute()
+        .data
+        or []
+    )
+    remote_annotations = (
+        client.table("annotations").select("*").execute().data or []
+    )
+    annotations_by_id = {
+        str(annotation["review_id"]): annotation
+        for annotation in remote_annotations
+    }
+
     sys.path.insert(0, str(ROOT))
     from annotation_app.app_logic import build_export_csv
 
-    initial_csv = build_export_csv(database_rows, {})
+    initial_csv = build_export_csv(remote_items, annotations_by_id)
     client.storage.from_(bucket_name).upload(
         path="exports/subtype_labeling_latest.csv",
         file=initial_csv,
@@ -183,8 +206,7 @@ def main() -> None:
         },
     )
 
-    remote_rows = client.table("review_items").select("review_id").execute().data or []
-    remote_ids = {str(row["review_id"]) for row in remote_rows}
+    remote_ids = {str(row["review_id"]) for row in remote_items}
     expected_ids = {row["review_id"] for row in rows}
     missing_ids = sorted(expected_ids - remote_ids)
     if missing_ids:
