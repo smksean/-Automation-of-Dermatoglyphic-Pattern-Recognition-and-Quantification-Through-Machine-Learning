@@ -7,6 +7,7 @@ import unittest
 from annotation_app.app_logic import (
     build_export_csv,
     filtered_items,
+    next_review_id,
     progress_counts,
     validate_annotation,
 )
@@ -98,6 +99,26 @@ class AnnotationLogicTests(unittest.TestCase):
         self.assertEqual([row["review_id"] for row in rows], ["A0001", "W0001"])
         self.assertEqual(rows[0]["confirmed_subtype"], "plain_arch")
         self.assertEqual(rows[1]["confirmed_subtype"], "")
+
+    def test_next_review_prefers_unanswered_and_wraps(self) -> None:
+        annotations = {"A0001": valid_arch_annotation()}
+        self.assertEqual(
+            next_review_id(["A0001", "W0001"], "A0001", annotations),
+            "W0001",
+        )
+        self.assertEqual(
+            next_review_id(["A0001", "W0001"], "W0001", annotations),
+            "W0001",
+        )
+
+    def test_next_review_is_sequential_when_everything_is_answered(self) -> None:
+        whorl = valid_arch_annotation()
+        whorl["confirmed_subtype"] = "plain_whorl"
+        annotations = {"A0001": valid_arch_annotation(), "W0001": whorl}
+        self.assertEqual(
+            next_review_id(["A0001", "W0001"], "A0001", annotations),
+            "W0001",
+        )
 
 
 if __name__ == "__main__":

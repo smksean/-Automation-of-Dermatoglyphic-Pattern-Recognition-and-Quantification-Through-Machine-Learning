@@ -181,3 +181,26 @@ def filtered_items(
             continue
         result.append(item)
     return result
+
+
+def next_review_id(
+    review_ids: list[str],
+    current_id: str,
+    annotations_by_id: Mapping[str, Mapping[str, Any]],
+) -> str:
+    """Prefer the next unanswered item, then fall back to sequential navigation."""
+    if not review_ids:
+        return current_id
+    try:
+        current_position = review_ids.index(current_id)
+    except ValueError:
+        current_position = -1
+
+    ordered_after_current = [
+        review_ids[(current_position + offset) % len(review_ids)]
+        for offset in range(1, len(review_ids) + 1)
+    ]
+    for review_id in ordered_after_current:
+        if not annotation_is_complete(annotations_by_id.get(review_id)):
+            return review_id
+    return ordered_after_current[0]

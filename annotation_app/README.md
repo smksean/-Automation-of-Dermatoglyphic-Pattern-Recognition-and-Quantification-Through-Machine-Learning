@@ -188,6 +188,13 @@ The professor sees one fingerprint at a time and selects:
 The normal review action is derived automatically. A clear subtype is accepted;
 an `unclear` subtype or main-type concern is sent for adjudication.
 
+The question navigator works like an online examination: pending and saved
+items remain visible, Previous and Next move through the filtered queue, and a
+reviewer can jump back to any saved answer. Existing selections are preloaded;
+saving a change creates the next revision and retains the earlier audit event.
+Supabase changes are written immediately, while **Sync now from Supabase**
+loads edits made by another reviewer.
+
 Each save updates the shared database, appends an immutable audit event, and
 refreshes `exports/subtype_labeling_latest.csv` in the private bucket. The
 sidebar also provides an immediate CSV download and progress filters.

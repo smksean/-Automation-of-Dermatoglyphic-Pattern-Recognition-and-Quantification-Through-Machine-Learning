@@ -17,8 +17,10 @@ if str(ROOT) not in sys.path:
 
 from annotation_app.app_logic import (  # noqa: E402
     CONFIDENCE_VALUES,
+    annotation_is_complete,
     build_export_csv,
     filtered_items,
+    next_review_id,
     progress_counts,
     validate_annotation,
 )
@@ -120,6 +122,15 @@ st.markdown(
         padding: 0.7rem 0.9rem;
         margin: 0.5rem 0 1rem;
     }
+    .saved-answer {
+        background: var(--green-soft);
+        border: 1px solid #cfe6de;
+        border-radius: 12px;
+        color: var(--ink);
+        padding: 0.75rem 0.9rem;
+        margin: 0 0 1rem;
+    }
+    .saved-answer strong { color: var(--green); }
     .stButton > button, .stFormSubmitButton > button, .stDownloadButton > button {
         border-radius: 10px;
         min-height: 2.7rem;
@@ -150,6 +161,8 @@ def runtime_config() -> tuple[dict[str, Any], dict[str, Any]]:
     environment_app = {
         "backend": os.environ.get("ANNOTATION_BACKEND"),
         "review_access_code": os.environ.get("REVIEW_ACCESS_CODE"),
+        "local_package_dir": os.environ.get("ANNOTATION_LOCAL_PACKAGE_DIR"),
+        "local_state_dir": os.environ.get("ANNOTATION_LOCAL_STATE_DIR"),
     }
     for name, value in environment_app.items():
         if value:
@@ -372,6 +385,8 @@ if csv_warning := st.session_state.pop("csv_warning", None):
     st.warning(csv_warning)
 
 with st.sidebar:
+    if backend_mode == "supabase":
+        st.success("● Live Supabase connection")
     st.subheader("Review progress")
     st.progress(counts["completed"] / counts["total"] if counts["total"] else 0)
     metric_columns = st.columns(2)
@@ -388,7 +403,7 @@ with st.sidebar:
         "Main type", ["all", "arch", "whorl"], format_func=display_value
     )
     status_filter = st.selectbox(
-        "Status", ["pending", "completed", "all"], format_func=display_value
+        "Status", ["all", "pending", "completed"], format_func=display_value
     )
     warnings_only = st.checkbox("Alternative-code warnings only")
 
@@ -400,9 +415,17 @@ with st.sidebar:
         mime="text/csv",
         width="stretch",
     )
-    if st.button("Refresh labels", width="stretch"):
+    refresh_label = (
+        "Sync now from Supabase" if backend_mode == "supabase" else "Refresh labels"
+    )
+    if st.button(refresh_label, width="stretch"):
         st.session_state.pop("private_image_cache", None)
         st.rerun()
+    if backend_mode == "supabase":
+        st.caption(
+            "Answers sync immediately when saved. Use Sync now to load changes "
+            "made by another reviewer."
+        )
 
     st.divider()
     st.caption(f"Reviewer: {reviewer_id}")
@@ -424,16 +447,44 @@ if not queue:
     st.stop()
 
 queue_ids = [str(item["review_id"]) for item in queue]
-current_id = str(st.session_state.get("current_review_id", queue_ids[0]))
-if current_id not in queue_ids:
+queue_by_id = {str(item["review_id"]): item for item in queue}
+
+
+def navigator_label(review_id: str) -> str:
+    item = queue_by_id[review_id]
+    annotation = annotations_by_id.get(review_id)
+    if annotation_is_complete(annotation):
+        subtype = display_value(str(annotation.get("confirmed_subtype", "")))
+        status = "✓ Saved"
+    else:
+        subtype = "Not answered"
+        status = "○ Pending"
+    return (
+        f"{status} · {review_id} · "
+        f"{display_value(str(item['current_main_type']))} · {subtype}"
+    )
+
+
+stored_id = str(st.session_state.get("current_review_id", ""))
+navigator_id = str(st.session_state.get("question_navigator", ""))
+requested_id = str(st.session_state.pop("requested_review_id", ""))
+if requested_id in queue_ids:
+    current_id = requested_id
+elif navigator_id in queue_ids:
+    current_id = navigator_id
+elif stored_id in queue_ids:
+    current_id = stored_id
+else:
     current_id = queue_ids[0]
-    st.session_state["current_review_id"] = current_id
+st.session_state["current_review_id"] = current_id
+st.session_state["question_navigator"] = current_id
 
 selected_id = st.selectbox(
-    "Review item",
+    "Question navigator",
     queue_ids,
-    index=queue_ids.index(current_id),
-    label_visibility="collapsed",
+    format_func=navigator_label,
+    help="Jump to any pending or saved answer. Saved choices remain editable.",
+    key="question_navigator",
 )
 if selected_id != current_id:
     current_id = selected_id
@@ -445,17 +496,22 @@ existing = annotations_by_id.get(current_id, {})
 
 nav_left, nav_status, nav_right = st.columns([1, 2, 1])
 if nav_left.button("← Previous", disabled=position == 0, width="stretch"):
-    st.session_state["current_review_id"] = queue_ids[position - 1]
+    previous_id = queue_ids[position - 1]
+    st.session_state["current_review_id"] = previous_id
+    st.session_state["requested_review_id"] = previous_id
     st.rerun()
 nav_status.markdown(
-    f"<div style='text-align:center;padding-top:0.45rem'>Queue item "
-    f"{position + 1} of {len(queue)}</div>",
+    f"<div style='text-align:center;padding-top:0.45rem'>Image "
+    f"{position + 1} of {len(queue)} · "
+    f"{'Saved' if annotation_is_complete(existing) else 'Pending'}</div>",
     unsafe_allow_html=True,
 )
 if nav_right.button(
     "Next →", disabled=position == len(queue) - 1, width="stretch"
 ):
-    st.session_state["current_review_id"] = queue_ids[position + 1]
+    next_id = queue_ids[position + 1]
+    st.session_state["current_review_id"] = next_id
+    st.session_state["requested_review_id"] = next_id
     st.rerun()
 
 image_column, form_column = st.columns([1.05, 1], gap="large")
@@ -487,6 +543,20 @@ with form_column:
         """,
         unsafe_allow_html=True,
     )
+
+    if annotation_is_complete(existing):
+        st.markdown(
+            f"""
+            <div class="saved-answer">
+                <strong>Saved answer:</strong>
+                {display_value(str(existing.get('confirmed_subtype', '')))} ·
+                {display_value(str(existing.get('confidence', '')))} confidence ·
+                revision {int(existing.get('revision') or 1)}<br>
+                <small>Change any selection below and save again to update it.</small>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
     subtype_options = list(current_item["permitted_subtypes"])
     confidence_options = list(CONFIDENCE_VALUES)
@@ -541,7 +611,13 @@ with form_column:
                 "A note is required only when choosing Unclear or flagging the main type."
             )
         submitted = st.form_submit_button(
-            "Save label and continue →", type="primary", width="stretch"
+            (
+                "Update answer and continue →"
+                if annotation_is_complete(existing)
+                else "Save answer and continue →"
+            ),
+            type="primary",
+            width="stretch",
         )
 
     if submitted:
@@ -579,18 +655,18 @@ with form_column:
                 except AnnotationBackendError as exc:
                     st.session_state["csv_warning"] = str(exc)
 
-                remaining = filtered_items(
-                    items,
+                next_id = next_review_id(
+                    queue_ids,
+                    current_id,
                     fresh_by_id,
-                    main_type=main_type_filter,
-                    status="pending",
-                    warnings_only=warnings_only,
                 )
-                remaining_ids = [str(item["review_id"]) for item in remaining]
-                if remaining_ids:
-                    st.session_state["current_review_id"] = remaining_ids[0]
+                st.session_state["current_review_id"] = next_id
+                st.session_state["requested_review_id"] = next_id
+                save_verb = "Updated" if existing else "Saved"
                 st.session_state["flash_message"] = (
-                    f"Saved {current_id} as {saved.get('confirmed_subtype', confirmed_subtype)}."
+                    f"{save_verb} {current_id} as "
+                    f"{saved.get('confirmed_subtype', confirmed_subtype)} "
+                    f"(revision {saved.get('revision', 1)})."
                 )
                 st.rerun()
             except AnnotationBackendError as exc:
