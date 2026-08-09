@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hmac
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -141,6 +142,38 @@ def secret_section(name: str) -> dict[str, Any]:
         return {}
 
 
+def runtime_config() -> tuple[dict[str, Any], dict[str, Any]]:
+    """Merge ignored/hosted secrets with optional server environment values."""
+    app_config = secret_section("app")
+    supabase_config = secret_section("supabase")
+
+    environment_app = {
+        "backend": os.environ.get("ANNOTATION_BACKEND"),
+        "review_access_code": os.environ.get("REVIEW_ACCESS_CODE"),
+    }
+    for name, value in environment_app.items():
+        if value:
+            app_config[name] = value
+
+    if allowed := os.environ.get("ALLOWED_REVIEWER_IDS"):
+        app_config["allowed_reviewer_ids"] = [
+            value.strip() for value in allowed.split(",") if value.strip()
+        ]
+
+    environment_supabase = {
+        "url": os.environ.get("SUPABASE_URL"),
+        "service_role_key": os.environ.get("SUPABASE_SECRET_KEY")
+        or os.environ.get("SUPABASE_SERVICE_ROLE_KEY"),
+        "bucket": os.environ.get("SUPABASE_BUCKET"),
+        "export_path": os.environ.get("SUPABASE_EXPORT_PATH"),
+    }
+    for name, value in environment_supabase.items():
+        if value:
+            supabase_config[name] = value
+
+    return app_config, supabase_config
+
+
 @st.cache_resource(show_spinner=False)
 def create_supabase_backend(
     url: str,
@@ -253,7 +286,7 @@ def get_private_image(
     return cache[review_id]
 
 
-app_config = secret_section("app")
+app_config, configured_supabase = runtime_config()
 reviewer_id = require_reviewer(app_config)
 backend_mode = str(app_config.get("backend", "supabase")).strip().lower()
 if backend_mode == "local":
@@ -280,7 +313,7 @@ if backend_mode == "local":
         st.error(str(exc))
         st.stop()
 elif backend_mode == "supabase":
-    supabase_config = secret_section("supabase")
+    supabase_config = configured_supabase
     required_supabase = {"url", "service_role_key", "bucket"}
     missing_config = sorted(required_supabase - set(supabase_config))
     if missing_config:

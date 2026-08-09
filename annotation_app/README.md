@@ -40,6 +40,11 @@ Local test annotations are written to the ignored folder
 `annotation_exports/local_preview/`. Delete or move that folder when the local
 test is finished and before beginning real expert annotation.
 
+For a temporary server process, the same settings can be supplied through
+`ANNOTATION_BACKEND`, `REVIEW_ACCESS_CODE`, `ALLOWED_REVIEWER_IDS`,
+`SUPABASE_URL`, `SUPABASE_SECRET_KEY`, and `SUPABASE_BUCKET`. This allows local
+testing without writing the Supabase server key to disk.
+
 ## Security architecture
 
 - GitHub contains application code only—never biometric images or credentials.
