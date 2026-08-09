@@ -1,5 +1,4 @@
--- Private shared backend for the fingerprint subtype annotation app.
--- Run this once in the Supabase SQL editor before uploading the review package.
+-- Private storage and shared backend for expert fingerprint subtype review.
 
 insert into storage.buckets (id, name, public, file_size_limit)
 values ('fingerprint-review', 'fingerprint-review', false, 10485760)
@@ -61,8 +60,8 @@ alter table public.review_items enable row level security;
 alter table public.annotations enable row level security;
 alter table public.annotation_events enable row level security;
 
--- The Streamlit server uses a service-role secret. Browser clients receive no
--- database or storage credentials and no anon/authenticated table access.
+-- The trusted Streamlit server uses a secret server-side key. Browser clients
+-- receive no database or storage credentials and no table access.
 revoke all on public.review_items from anon, authenticated;
 revoke all on public.annotations from anon, authenticated;
 revoke all on public.annotation_events from anon, authenticated;

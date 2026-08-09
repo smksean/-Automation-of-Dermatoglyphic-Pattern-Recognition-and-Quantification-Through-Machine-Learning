@@ -62,16 +62,24 @@ privacy, and data-governance process before deployment.
 Only continue with the following sections after the localhost workflow has been
 reviewed and cloud processing of the biometric data has been approved.
 
-## 1. Create the Supabase backend
+## 1. Create and link the Supabase backend
 
 1. Create a project in the institution-approved account and region.
-2. In the SQL editor, run [`supabase_schema.sql`](supabase_schema.sql).
-3. Create a Storage bucket named `fingerprint-review`.
-4. Keep the bucket **private**. Do not add public read policies.
-5. Restrict its MIME types to `image/png` and `text/csv` if the dashboard
-   provides that option.
-6. Copy the project URL and server-side service-role key. Never use the service
-   key in browser code or commit it to Git.
+2. Authenticate and link this repository with the pinned CLI:
+
+```powershell
+npx supabase login
+npx supabase link --project-ref YOUR_PROJECT_REFERENCE
+npx supabase db push --dry-run
+npx supabase db push
+```
+
+3. The migration in `supabase/migrations/` creates the database objects and the
+   private `fingerprint-review` bucket. Do not add public read policies.
+4. As a manual alternative, run [`supabase_schema.sql`](supabase_schema.sql) in
+   the dashboard SQL editor.
+5. Copy the project URL and a server-side Supabase secret key. Never use the
+   secret key in browser code or commit it to Git.
 
 Supabase private buckets require authenticated access or time-limited signed
 URLs. This app downloads images on the trusted Streamlit server and sends only

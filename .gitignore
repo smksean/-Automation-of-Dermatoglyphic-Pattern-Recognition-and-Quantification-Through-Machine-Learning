@@ -27,6 +27,8 @@ __pycache__/
 .streamlit/secrets.toml
 .venv/
 venv/
+.tools/
+node_modules/
 
 # Private annotation exports
 annotation_exports/

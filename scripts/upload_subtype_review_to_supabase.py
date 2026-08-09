@@ -75,7 +75,7 @@ def main() -> None:
         )
 
     print(f"Validated {len(rows)} review records in {package_dir}")
-    print(f"Target bucket: {bucket_name} (must already exist and be private)")
+    print(f"Target bucket: {bucket_name} (created privately by the database migration)")
     if args.dry_run:
         print("Dry run complete; nothing was uploaded.")
         return
