@@ -107,6 +107,15 @@ Validate without uploading:
 python scripts/upload_subtype_review_to_supabase.py --dry-run
 ```
 
+Upload a balanced pilot of five arch and five whorl images first:
+
+```powershell
+python scripts/upload_subtype_review_to_supabase.py --pilot-per-type 5
+```
+
+Verify the pilot in the application before continuing. The pilot command is
+idempotent and never deletes existing records.
+
 Upload the 672 validated images and static review records:
 
 ```powershell

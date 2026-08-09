@@ -53,18 +53,62 @@ def chunks(values: list[dict[str, object]], size: int = 100):
         yield values[start : start + size]
 
 
+def select_review_rows(
+    rows: list[dict[str, str]], pilot_per_type: int | None = None
+) -> list[dict[str, str]]:
+    """Return all rows or a stable, balanced arch/whorl pilot selection."""
+    if pilot_per_type is None:
+        return rows
+    if pilot_per_type < 1:
+        raise ValueError("--pilot-per-type must be at least 1.")
+
+    selected: list[dict[str, str]] = []
+    for main_type in ("arch", "whorl"):
+        matches = sorted(
+            (row for row in rows if row["current_main_type"] == main_type),
+            key=lambda row: row["review_id"],
+        )
+        if len(matches) < pilot_per_type:
+            raise ValueError(
+                f"Requested {pilot_per_type} {main_type} pilot images, "
+                f"but only {len(matches)} are available."
+            )
+        selected.extend(matches[:pilot_per_type])
+    return sorted(selected, key=lambda row: row["review_id"])
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--package-dir", type=Path, default=DEFAULT_PACKAGE)
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Validate the package and configuration without uploading anything.",
+        help="Validate the package and selection without uploading anything.",
+    )
+    parser.add_argument(
+        "--pilot-per-type",
+        type=int,
+        metavar="N",
+        help="Upload only N arch and N whorl images for a balanced pilot.",
     )
     args = parser.parse_args()
 
     package_dir = args.package_dir.resolve()
-    rows = verify_package(package_dir)
+    all_rows = verify_package(package_dir)
+    rows = select_review_rows(all_rows, args.pilot_per_type)
+
+    type_counts = {
+        main_type: sum(row["current_main_type"] == main_type for row in rows)
+        for main_type in ("arch", "whorl")
+    }
+    print(f"Validated all {len(all_rows)} review records in {package_dir}")
+    print(
+        f"Selected {len(rows)} records: "
+        f"{type_counts['arch']} arch and {type_counts['whorl']} whorl"
+    )
+    if args.dry_run:
+        print("Dry run complete; no credentials were read and nothing was uploaded.")
+        return
 
     url = os.environ.get("SUPABASE_URL", "").strip()
     service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "").strip()
@@ -74,11 +118,7 @@ def main() -> None:
             "Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in the current shell."
         )
 
-    print(f"Validated {len(rows)} review records in {package_dir}")
     print(f"Target bucket: {bucket_name} (created privately by the database migration)")
-    if args.dry_run:
-        print("Dry run complete; nothing was uploaded.")
-        return
 
     try:
         from supabase import create_client
@@ -143,14 +183,19 @@ def main() -> None:
         },
     )
 
-    remote_count = len(
-        client.table("review_items").select("review_id").execute().data or []
-    )
-    if remote_count != len(rows):
+    remote_rows = client.table("review_items").select("review_id").execute().data or []
+    remote_ids = {str(row["review_id"]) for row in remote_rows}
+    expected_ids = {row["review_id"] for row in rows}
+    missing_ids = sorted(expected_ids - remote_ids)
+    if missing_ids:
         raise RuntimeError(
-            f"Upload finished but Supabase has {remote_count} items; expected {len(rows)}."
+            "Upload finished but Supabase is missing selected review IDs: "
+            + ", ".join(missing_ids)
         )
-    print(f"Upload complete: {remote_count} review items and the initial shared CSV.")
+    print(
+        f"Upload complete: verified {len(expected_ids)} selected items; "
+        f"Supabase now contains {len(remote_ids)} review items and the shared CSV."
+    )
 
 
 if __name__ == "__main__":
