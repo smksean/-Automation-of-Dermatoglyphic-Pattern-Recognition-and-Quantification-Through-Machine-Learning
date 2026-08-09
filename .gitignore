@@ -20,11 +20,16 @@ models/
 .ipynb_checkpoints/
 __pycache__/
 *.pyc
+/tmp*/
 
 # Environment files
 .env
+.streamlit/secrets.toml
 .venv/
 venv/
+
+# Private annotation exports
+annotation_exports/
 
 # OS/editor files
 .DS_Store
