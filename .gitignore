@@ -10,11 +10,13 @@ extracted-slide-assets/
 *.zip
 
 # Trained weights and serialized models
-models/
+models/*
+!models/efficientnet_320_cv/
 *.joblib
 *.pth
 *.pt
 *.ckpt
+!models/efficientnet_320_cv/*.pt
 
 # Notebook/runtime noise
 .ipynb_checkpoints/

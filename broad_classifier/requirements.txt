@@ -1,5 +1,4 @@
 streamlit==1.60.0
-supabase==2.31.0
 numpy==2.5.1
 opencv-python-headless==5.0.0.93
 pillow==12.3.0
