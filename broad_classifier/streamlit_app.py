@@ -24,6 +24,10 @@ from broad_classifier.inference import (  # noqa: E402
     PredictionResult,
     decode_image,
 )
+from broad_classifier.model_assets import (  # noqa: E402
+    CHECKPOINT_ASSETS,
+    ensure_checkpoints,
+)
 
 
 DEFAULT_MODEL_DIRECTORY = ROOT / "models" / "efficientnet_320_cv"
@@ -257,8 +261,9 @@ st.markdown(
 
 @st.cache_resource(show_spinner=False)
 def load_ensemble(model_directory: str) -> BroadPatternEnsemble:
-    """Load the five CPU models once per Streamlit server process."""
-    return BroadPatternEnsemble.from_directory(Path(model_directory), device_name="cpu")
+    """Retrieve, verify, and load the five CPU models once per server process."""
+    verified_directory = ensure_checkpoints(Path(model_directory))
+    return BroadPatternEnsemble.from_directory(verified_directory, device_name="cpu")
 
 
 def clear_analysis() -> None:
@@ -275,14 +280,14 @@ def clear_analysis() -> None:
 
 def render_sidebar() -> None:
     checkpoint_count = sum(
-        (MODEL_DIRECTORY / f"efficientnet_b0_320_fold_{fold}.pt").is_file()
-        for fold in range(1, 6)
+        (MODEL_DIRECTORY / asset.filename).is_file()
+        for asset in CHECKPOINT_ASSETS
     )
     st.sidebar.markdown("## Pattern classifier")
     if checkpoint_count == 5:
         st.sidebar.success("Five-model ensemble ready")
     else:
-        st.sidebar.error(f"Model files available: {checkpoint_count}/5")
+        st.sidebar.info("Five verified models download on the first analysis")
 
     st.sidebar.markdown("### Model profile")
     st.sidebar.markdown(
@@ -480,7 +485,10 @@ else:
         if analyze:
             try:
                 start = time.perf_counter()
-                with st.spinner("Preparing the image and consulting five fold models…"):
+                with st.spinner(
+                    "Preparing the image and loading five fold models. "
+                    "The first analysis may take a minute…"
+                ):
                     ensemble = load_ensemble(str(MODEL_DIRECTORY.resolve()))
                     result, preprocessed = ensemble.predict_bytes(image_bytes)
                 st.session_state["prediction_result"] = result

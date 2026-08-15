@@ -12,11 +12,11 @@ extracted-slide-assets/
 # Trained weights and serialized models
 models/*
 !models/efficientnet_320_cv/
+!models/efficientnet_320_cv/SHA256SUMS.txt
 *.joblib
 *.pth
 *.pt
 *.ckpt
-!models/efficientnet_320_cv/*.pt
 
 # Notebook/runtime noise
 .ipynb_checkpoints/

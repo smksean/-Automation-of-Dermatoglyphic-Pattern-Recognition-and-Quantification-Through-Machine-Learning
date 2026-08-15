@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+from hashlib import sha256
 from io import BytesIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import Mock
 
 import cv2
 import numpy as np
@@ -17,6 +21,14 @@ from broad_classifier.inference import (
 )
 from broad_classifier.app_logic import assess_prediction
 from broad_classifier.inference import PredictionResult
+from broad_classifier.model_assets import (
+    CheckpointAsset,
+    CheckpointDownloadError,
+    ensure_checkpoints,
+)
+
+
+TEST_TEMP_ROOT = Path(__file__).resolve().parents[1]
 
 
 def encoded_image(array: np.ndarray, image_format: str = "PNG") -> bytes:
@@ -104,6 +116,44 @@ class BroadClassifierInferenceTests(unittest.TestCase):
             top_two_margin=0.87,
         )
         self.assertFalse(assess_prediction(result).needs_review)
+
+    def test_checkpoint_download_is_verified_and_cached(self) -> None:
+        payload = b"small deterministic checkpoint fixture"
+        asset = CheckpointAsset(
+            filename="fixture.pt",
+            sha256=sha256(payload).hexdigest(),
+            size_bytes=len(payload),
+        )
+        opener = Mock(return_value=BytesIO(payload))
+
+        with TemporaryDirectory(dir=TEST_TEMP_ROOT) as temporary_directory:
+            model_directory = Path(temporary_directory)
+            ensure_checkpoints(model_directory, assets=(asset,), opener=opener)
+            self.assertEqual((model_directory / asset.filename).read_bytes(), payload)
+
+            ensure_checkpoints(model_directory, assets=(asset,), opener=opener)
+            self.assertEqual(opener.call_count, 1)
+
+    def test_incomplete_checkpoint_download_is_rejected(self) -> None:
+        payload = b"incomplete"
+        asset = CheckpointAsset(
+            filename="fixture.pt",
+            sha256=sha256(payload + b"expected suffix").hexdigest(),
+            size_bytes=len(payload) + len(b"expected suffix"),
+        )
+
+        with TemporaryDirectory(dir=TEST_TEMP_ROOT) as temporary_directory:
+            model_directory = Path(temporary_directory)
+            with self.assertRaises(CheckpointDownloadError):
+                ensure_checkpoints(
+                    model_directory,
+                    assets=(asset,),
+                    opener=Mock(return_value=BytesIO(payload)),
+                )
+            self.assertFalse((model_directory / asset.filename).exists())
+            self.assertFalse(
+                (model_directory / f".{asset.filename}.download").exists()
+            )
 
 
 if __name__ == "__main__":

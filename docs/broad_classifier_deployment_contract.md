@@ -68,6 +68,12 @@ checkpoints:
 - `efficientnet_b0_320_fold_4.pt`
 - `efficientnet_b0_320_fold_5.pt`
 
+The deployment repository must remain lightweight enough for the hosting
+platform to clone. Checkpoint payloads may be retrieved after application
+startup only from the frozen, commit-pinned source URLs. Every download must be
+accepted only after its exact expected byte size and SHA-256 digest match the
+deployment manifest, and valid cached files should be reused.
+
 For each upload, calculate softmax probabilities for every checkpoint and
 average the five probability vectors. The predicted class is the class with
 the largest mean probability.

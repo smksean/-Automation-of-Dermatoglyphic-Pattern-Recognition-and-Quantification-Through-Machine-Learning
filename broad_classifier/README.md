@@ -6,7 +6,7 @@ from the expert subtype-review application in `annotation_app/`.
 
 ## Local run
 
-The five private checkpoints must exist under:
+For local inference, the five checkpoints are cached under:
 
 ```text
 models/efficientnet_320_cv/
@@ -27,8 +27,11 @@ annotation application:
 
 Open `http://localhost:8502`.
 
-Set `BROAD_CLASSIFIER_MODEL_DIR` to an alternative private checkpoint directory
-when required. Do not commit checkpoints or uploaded biometric images.
+If a valid checkpoint is missing, the application downloads it from the frozen
+GitHub source commit on the first analysis and verifies its exact byte size and
+SHA-256 digest before loading it. Set `BROAD_CLASSIFIER_MODEL_DIR` to an
+alternative checkpoint cache when required. Do not commit checkpoints or
+uploaded biometric images.
 
 ## Verification
 
@@ -61,7 +64,10 @@ Community Cloud detects `broad_classifier/requirements.txt` beside the
 entrypoint, so the broad app installs only its inference dependencies rather
 than the Supabase annotation dependencies in the repository root.
 
-The app also requires all five checkpoints under
-`models/efficientnet_320_cv/`. If they are delivered through Git LFS, confirm
-that the deployment log shows real checkpoint downloads rather than small LFS
-pointer files. Never place biometric test images or Streamlit secrets in Git.
+The deployment repository intentionally excludes checkpoint payloads so that
+Community Cloud can clone it quickly. On the first analysis, the app retrieves
+all five checkpoints from an immutable, commit-pinned GitHub media URL, stores
+them in the ephemeral model cache, and verifies each file against the frozen
+manifest. Later analyses in the same server process reuse the verified files
+and in-memory ensemble. Never place biometric test images or Streamlit secrets
+in Git.

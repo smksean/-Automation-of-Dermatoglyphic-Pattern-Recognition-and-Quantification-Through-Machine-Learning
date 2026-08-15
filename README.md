@@ -69,7 +69,7 @@ Data leakage is controlled through the following measures:
 - preprocessing statistics and model fitting are restricted to the corresponding training partition;
 - the EfficientNet development set excludes 60 subjects used by earlier experiments;
 - a further 30-subject, 334-image holdout remains locked and has not been used for model selection;
-- subject-level predictions, full-resolution source collections, and redistribution-restricted archives are excluded from GitHub; the five deployment checkpoints are stored through Git LFS, and the only biometric-image exception is the small, resized documentation gallery above.
+- subject-level predictions, full-resolution source collections, redistribution-restricted archives, and deploy-time checkpoint payloads are excluded from the current Git tree; the app retrieves the five frozen checkpoints from a commit-pinned source and verifies their SHA-256 hashes, and the only biometric-image exception is the small, resized documentation gallery above.
 
 Subject-disjoint partitioning and locked-holdout construction form part of the experimental methodology used to support credible evaluation; they are not treated as separate research outcomes.
 
@@ -170,7 +170,7 @@ Model-generated pseudo-labels may support review prioritization but must not be 
 
 ## Reproducibility
 
-The notebooks are ordered according to the intended execution sequence. Google Colab notebooks mount Drive, extract only the required development artifacts, and verify that locked-holdout files are absent from the runtime. Aggregate experiment outputs are versioned in [`results`](results/); large arrays, full-resolution image collections, archives, subject-level prediction tables, and non-deployment weights remain outside version control. The five broad-classifier deployment checkpoints are versioned through Git LFS. The small README gallery can be regenerated locally from the ignored training data with [`scripts/generate_training_sample_gallery.py`](scripts/generate_training_sample_gallery.py).
+The notebooks are ordered according to the intended execution sequence. Google Colab notebooks mount Drive, extract only the required development artifacts, and verify that locked-holdout files are absent from the runtime. Aggregate experiment outputs are versioned in [`results`](results/); large arrays, full-resolution image collections, archives, subject-level prediction tables, and weights remain outside the current Git tree. For deployment, the app downloads the five frozen broad-classifier checkpoints from an immutable source commit and verifies their sizes and SHA-256 hashes before loading them. The small README gallery can be regenerated locally from the ignored training data with [`scripts/generate_training_sample_gallery.py`](scripts/generate_training_sample_gallery.py).
 
 ## Web Application and Deployment
 
