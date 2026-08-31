@@ -1,0 +1,16 @@
+artifact_path,purpose,contains_biometric_data,contains_secrets,git_status,restore_or_regenerate,source_or_generator,notes
+sd302a/images/,raw SD 302 fingerprint images,yes,no,ignored,restore or re-download,official NIST SD 302a download,keep outside Git
+sd302b/images/,raw SD 302 fingerprint images,yes,no,ignored,restore or re-download,official NIST SD 302b download,keep outside Git
+sd302d/images/,locally retained SD 302 source images,yes,no,ignored,restore or re-download if needed,official NIST SD 302d download,not central to current broad-classifier results unless future workflow uses it
+ebts/baseline/,SD 302g EBTS/IRR annotation records,yes,no,ignored,restore or re-download,official NIST SD 302g download,source for field 9.307 pattern annotations
+ebts/challengers/,additional SD 302g EBTS/IRR annotation records,yes,no,ignored,restore or re-download,official NIST SD 302g download,source/checksum material
+data/processed/irr_pattern_entries.csv,flattened EBTS 9.307 pattern entries,possible,no,ignored,regenerate,notebooks/01_data_prep.ipynb,private row-level metadata
+data/processed/irr_image_labels.csv,image-level linked labels,possible,no,ignored,regenerate,notebooks/01_data_prep.ipynb,private row-level metadata
+data/processed/roll_broad_model_split.csv,subject-disjoint broad modelling table,possible,no,ignored,regenerate,notebooks/02_dataset_review_and_split.ipynb,private row-level metadata
+data/processed/roll_hog_features.npz,HOG baseline feature array,yes,no,ignored,regenerate,notebooks/03_model_training_baseline.ipynb,derived biometric features
+data/processed/colab_package/,160x160 CNN private package,yes,no,ignored,regenerate,notebooks/04_cnn_preprocessing_for_colab.ipynb,private model-development data
+data/processed/efficientnet_320_package/,320x320 EfficientNet private package,yes,no,ignored,regenerate,scripts/build_roll_320_clahe_package.py,contains CV and locked-holdout arrays
+data/processed/unlabeled_subtype_review_package_2026-08-04/,active arch/whorl subtype-review package,yes,no,ignored,regenerate,scripts/build_unlabeled_subtype_review_package.py,672 non-holdout review images
+annotation_exports/,local annotation app exports/state,possible,no,ignored,restore if real review answers exist,annotation_app local backend,do not lose real expert review answers
+.streamlit/secrets.toml,local Streamlit and Supabase secrets,no,yes,ignored,restore from password manager or service secret store,manual private configuration,never commit
+models/efficientnet_320_cv/*.pt,offline EfficientNet checkpoints,no,no,ignored,optional restore or download,broad_classifier/model_assets.py,pinned app download verifies checksums

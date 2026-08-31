@@ -50,6 +50,8 @@ The complete NIST SD 302 data are not distributed through this repository. The o
 
 The private raw-data and generated-artifact layout is mapped in
 [`docs/data_inventory_and_lineage.md`](docs/data_inventory_and_lineage.md).
+For moving the project to another computer without committing restricted data,
+see [`docs/personal_laptop_handoff.md`](docs/personal_laptop_handoff.md).
 
 ### Annotation Preparation
 
