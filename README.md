@@ -48,6 +48,9 @@ Detailed subtypes are retained where present: plain arch, tented arch, plain who
 
 The complete NIST SD 302 data are not distributed through this repository. The only fingerprint images included are the eight resized, labeled training examples shown below; access to the source dataset remains subject to the terms established by NIST.
 
+The private raw-data and generated-artifact layout is mapped in
+[`docs/data_inventory_and_lineage.md`](docs/data_inventory_and_lineage.md).
+
 ### Annotation Preparation
 
 Examiner-supplied pattern annotations were extracted from field `9.307` of the SD 302g EBTS records and linked to corresponding rolled fingerprint impressions. This extraction and linkage procedure constitutes dataset preparation rather than an independent research objective.
