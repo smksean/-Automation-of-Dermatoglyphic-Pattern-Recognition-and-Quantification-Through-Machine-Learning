@@ -15,11 +15,12 @@ python -m uvicorn inference_service.app:app --port 8000
 ```
 
 The service uses the checked local broad-model directory and private subtype
-artifact directory when they exist. `GET /health` does not load the broad
-ensemble. The first `POST /predict` verifies all five checkpoints. To stay
-within constrained CPU-container memory, inference loads each broad checkpoint
-into one reusable EfficientNet architecture sequentially and averages the same
-five probability vectors used by the local application.
+artifact directory when they exist. Application startup downloads and verifies
+all five broad checkpoints before `GET /health` can pass, but does not load the
+broad ensemble into memory. To stay within constrained CPU-container memory,
+inference loads each broad checkpoint into one reusable EfficientNet
+architecture sequentially and averages the same five probability vectors used
+by the local application.
 
 ## Container deployment
 
@@ -49,6 +50,11 @@ ASCII base64 secret file named `arch_subtype_classifier.b64` and
 ephemeral storage and verifies their fixed SHA-256 digests before loading them.
 Neither classifier is included in the source repository or built image. Set
 `API_TOKEN` on Render and use the same value in Vercel.
+
+The container caches the fixed ImageNet ResNet-18 feature-extractor weights
+used by subtype training. Complete two-stage requests are serialized so
+overlapping uploads cannot multiply model memory on the single-worker research
+deployment.
 
 Configure the Vercel project with the backend URL and the same token:
 

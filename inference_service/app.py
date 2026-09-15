@@ -5,6 +5,7 @@ from __future__ import annotations
 import base64
 import hmac
 import gc
+from contextlib import asynccontextmanager
 from hashlib import sha256
 import os
 import threading
@@ -162,6 +163,7 @@ class ModelRuntime:
     def __init__(self) -> None:
         self._ensemble: SequentialBroadEnsemble | None = None
         self._lock = threading.Lock()
+        self._prediction_lock = threading.Lock()
 
     @property
     def loaded(self) -> bool:
@@ -176,6 +178,10 @@ class ModelRuntime:
         return self._ensemble
 
     def predict(self, image_bytes: bytes) -> dict[str, Any]:
+        with self._prediction_lock:
+            return self._predict_locked(image_bytes)
+
+    def _predict_locked(self, image_bytes: bytes) -> dict[str, Any]:
         started = time.perf_counter()
         result, preprocessed = self.ensemble().predict_bytes(image_bytes)
         assessment = assess_prediction(result)
@@ -220,12 +226,23 @@ class ModelRuntime:
 
 
 runtime = ModelRuntime()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Prepare network-backed assets before Render marks the service ready."""
+    ensure_checkpoints(_model_directory())
+    _subtype_directory()
+    yield
+
+
 app = FastAPI(
     title="Dermatoglyphic Research Inference API",
     version="0.1.0",
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
+    lifespan=lifespan,
 )
 
 
