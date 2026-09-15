@@ -1,0 +1,28 @@
+{
+  "labels": [
+    "plain_arch",
+    "tented_arch"
+  ],
+  "matrices": {
+    "linear_svc_balanced": [
+      [
+        15,
+        4
+      ],
+      [
+        4,
+        3
+      ]
+    ],
+    "majority_baseline": [
+      [
+        19,
+        0
+      ],
+      [
+        7,
+        0
+      ]
+    ]
+  }
+}

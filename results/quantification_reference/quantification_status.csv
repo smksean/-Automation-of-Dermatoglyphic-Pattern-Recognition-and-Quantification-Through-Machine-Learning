@@ -1,0 +1,4 @@
+parameter,current status,eligible subjects,interpretation
+Pattern intensity,Calculated,188,Ten-finger qualitative pattern index
+Minutiae,Calculated,199,Examiner-marked EFS feature totals
+Total finger ridge count,Not primary endpoint,0,Validated expert ridge-count field 9.322 absent from restored annotations

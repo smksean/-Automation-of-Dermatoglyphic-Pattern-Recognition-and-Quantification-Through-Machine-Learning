@@ -11,8 +11,8 @@ from annotation_app.backend import AnnotationBackendError, LocalAnnotationBacken
 
 class LocalAnnotationBackendTests(unittest.TestCase):
     def setUp(self) -> None:
-        root = Path("annotation_exports/test_local_annotation_backend").resolve()
         workspace = Path.cwd().resolve()
+        root = (workspace / "annotation_exports" / "test_local_annotation_backend").resolve()
         if workspace not in root.parents:
             raise RuntimeError("Test directory must remain inside the workspace")
         if root.exists():

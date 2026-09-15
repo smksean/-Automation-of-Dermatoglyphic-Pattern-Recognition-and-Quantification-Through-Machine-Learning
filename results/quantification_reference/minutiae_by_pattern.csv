@@ -1,0 +1,6 @@
+broad_class,images,mean,std,median,minimum,maximum
+arch,155,102.923,42.638,95.0,8,297
+left_slant_loop,589,107.1,43.309,103.0,4,354
+right_slant_loop,646,108.082,43.062,103.5,3,345
+unclassifiable,11,100.091,38.112,99.0,27,158
+whorl,598,126.687,42.474,121.0,15,303

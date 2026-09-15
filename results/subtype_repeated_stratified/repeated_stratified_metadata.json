@@ -1,0 +1,9 @@
+{
+  "created_at_utc": "2026-09-11T12:03:22.427191+00:00",
+  "evaluation_scope": "non-holdout expert-reviewed subtype prototype; stratified, not subject-grouped",
+  "n_repeats": 10,
+  "n_splits": 5,
+  "private_predictions": "data/processed/subtype_review_completed_2026-09-06/repeated_stratified_evaluation/repeated_stratified_test_predictions.csv",
+  "seed": 244664,
+  "source_provenance": "review package generated from non-locked-holdout records; locked-holdout generic records excluded before Supabase upload"
+}

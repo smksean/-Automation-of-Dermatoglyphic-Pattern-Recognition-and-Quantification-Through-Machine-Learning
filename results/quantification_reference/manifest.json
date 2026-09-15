@@ -1,0 +1,11 @@
+{
+  "created_at_utc": "2026-09-15T14:13:47.939577+00:00",
+  "canonical_source": "SD302b baseline device V, 1000 ppi, rolled impressions",
+  "pattern_intensity_formula": "loop_count + 2 * whorl_count across ten classifiable fingers",
+  "subject_level_outputs": "data/processed/sd302_2026_restoration/quantification_reference",
+  "public_output_scope": "aggregate values only",
+  "ridge_count_status": "not a primary reported endpoint in this phase; SD302g has no validated expert field 9.322 ridge-count annotations",
+  "canonical_impressions": 1999,
+  "complete_ten_finger_subjects": 199,
+  "pattern_intensity_subjects": 188
+}

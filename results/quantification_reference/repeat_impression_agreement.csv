@@ -1,0 +1,6 @@
+comparison_device,paired_impressions,broad_pattern_agreement_pct,minutiae_count_mae,minutiae_count_median_absolute_difference,minutiae_count_spearman
+all,381,94.23,24.887,20.0,0.726
+C,186,91.4,25.833,21.0,0.739
+R,21,100.0,23.857,22.0,0.858
+S,27,96.3,27.926,19.0,0.586
+U,147,96.6,23.279,16.0,0.724

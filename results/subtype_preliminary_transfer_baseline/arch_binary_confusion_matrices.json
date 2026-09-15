@@ -1,0 +1,38 @@
+{
+  "labels": [
+    "plain_arch",
+    "tented_arch"
+  ],
+  "matrices": {
+    "majority_baseline": [
+      [
+        19,
+        0
+      ],
+      [
+        7,
+        0
+      ]
+    ],
+    "resnet18_linear_svc_balanced": [
+      [
+        10,
+        9
+      ],
+      [
+        5,
+        2
+      ]
+    ],
+    "resnet18_logistic_balanced": [
+      [
+        13,
+        6
+      ],
+      [
+        5,
+        2
+      ]
+    ]
+  }
+}

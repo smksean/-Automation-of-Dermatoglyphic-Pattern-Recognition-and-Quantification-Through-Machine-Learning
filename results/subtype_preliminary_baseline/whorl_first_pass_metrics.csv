@@ -1,0 +1,3 @@
+﻿experiment,model,train_rows,test_rows,accuracy,balanced_accuracy,macro_f1,weighted_f1,train_class_counts,test_class_counts
+whorl_first_pass,majority_baseline,399,134,0.9104477611940298,0.3333333333333333,0.3177083333333333,0.8677705223880597,"{'central_pocket_loop_whorl': 15, 'double_loop_whorl': 19, 'plain_whorl': 365}","{'central_pocket_loop_whorl': 5, 'double_loop_whorl': 7, 'plain_whorl': 122}"
+whorl_first_pass,linear_svc_balanced,399,134,0.8880597014925373,0.3251366120218579,0.31357048748353095,0.8564686449177039,"{'central_pocket_loop_whorl': 15, 'double_loop_whorl': 19, 'plain_whorl': 365}","{'central_pocket_loop_whorl': 5, 'double_loop_whorl': 7, 'plain_whorl': 122}"

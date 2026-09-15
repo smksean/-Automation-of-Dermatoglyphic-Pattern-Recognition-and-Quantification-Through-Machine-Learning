@@ -1,0 +1,165 @@
+{
+  "created_at_utc": "2026-09-07T11:41:03.402684+00:00",
+  "evaluation_protocol": "preliminary stratified train/test split by accepted subtype label; not subject-disjoint because subject_id is not present in the Supabase export",
+  "experiments": [
+    {
+      "class_counts": {
+        "plain_arch": 75,
+        "tented_arch": 26
+      },
+      "classes": [
+        "plain_arch",
+        "tented_arch"
+      ],
+      "experiment": "arch_binary",
+      "metrics": [
+        {
+          "accuracy": 0.7307692307692307,
+          "balanced_accuracy": 0.5,
+          "experiment": "arch_binary",
+          "macro_f1": 0.4222222222222222,
+          "model": "majority_baseline",
+          "test_class_counts": {
+            "plain_arch": 19,
+            "tented_arch": 7
+          },
+          "test_rows": 26,
+          "train_class_counts": {
+            "plain_arch": 56,
+            "tented_arch": 19
+          },
+          "train_rows": 75,
+          "weighted_f1": 0.6170940170940171
+        },
+        {
+          "accuracy": 0.46153846153846156,
+          "balanced_accuracy": 0.40601503759398494,
+          "experiment": "arch_binary",
+          "macro_f1": 0.40522875816993464,
+          "model": "resnet18_linear_svc_balanced",
+          "test_class_counts": {
+            "plain_arch": 19,
+            "tented_arch": 7
+          },
+          "test_rows": 26,
+          "train_class_counts": {
+            "plain_arch": 56,
+            "tented_arch": 19
+          },
+          "train_rows": 75,
+          "weighted_f1": 0.489693313222725
+        },
+        {
+          "accuracy": 0.5769230769230769,
+          "balanced_accuracy": 0.4849624060150376,
+          "experiment": "arch_binary",
+          "macro_f1": 0.48468468468468473,
+          "model": "resnet18_logistic_balanced",
+          "test_class_counts": {
+            "plain_arch": 19,
+            "tented_arch": 7
+          },
+          "test_rows": 26,
+          "train_class_counts": {
+            "plain_arch": 56,
+            "tented_arch": 19
+          },
+          "train_rows": 75,
+          "weighted_f1": 0.5853083853083854
+        }
+      ],
+      "rows": 101,
+      "test_rows": 26,
+      "train_rows": 75
+    },
+    {
+      "class_counts": {
+        "central_pocket_loop_whorl": 20,
+        "double_loop_whorl": 26,
+        "plain_whorl": 487
+      },
+      "classes": [
+        "plain_whorl",
+        "central_pocket_loop_whorl",
+        "double_loop_whorl"
+      ],
+      "experiment": "whorl_first_pass",
+      "metrics": [
+        {
+          "accuracy": 0.9104477611940298,
+          "balanced_accuracy": 0.3333333333333333,
+          "experiment": "whorl_first_pass",
+          "macro_f1": 0.3177083333333333,
+          "model": "majority_baseline",
+          "test_class_counts": {
+            "central_pocket_loop_whorl": 5,
+            "double_loop_whorl": 7,
+            "plain_whorl": 122
+          },
+          "test_rows": 134,
+          "train_class_counts": {
+            "central_pocket_loop_whorl": 15,
+            "double_loop_whorl": 19,
+            "plain_whorl": 365
+          },
+          "train_rows": 399,
+          "weighted_f1": 0.8677705223880597
+        },
+        {
+          "accuracy": 0.8805970149253731,
+          "balanced_accuracy": 0.3672911787665886,
+          "experiment": "whorl_first_pass",
+          "macro_f1": 0.3786666666666667,
+          "model": "resnet18_linear_svc_balanced",
+          "test_class_counts": {
+            "central_pocket_loop_whorl": 5,
+            "double_loop_whorl": 7,
+            "plain_whorl": 122
+          },
+          "test_rows": 134,
+          "train_class_counts": {
+            "central_pocket_loop_whorl": 15,
+            "double_loop_whorl": 19,
+            "plain_whorl": 365
+          },
+          "train_rows": 399,
+          "weighted_f1": 0.8626268656716419
+        },
+        {
+          "accuracy": 0.8955223880597015,
+          "balanced_accuracy": 0.526463700234192,
+          "experiment": "whorl_first_pass",
+          "macro_f1": 0.5323129251700681,
+          "model": "resnet18_logistic_balanced",
+          "test_class_counts": {
+            "central_pocket_loop_whorl": 5,
+            "double_loop_whorl": 7,
+            "plain_whorl": 122
+          },
+          "test_rows": 134,
+          "train_class_counts": {
+            "central_pocket_loop_whorl": 15,
+            "double_loop_whorl": 19,
+            "plain_whorl": 365
+          },
+          "train_rows": 399,
+          "weighted_f1": 0.8923621687480963
+        }
+      ],
+      "rows": 533,
+      "test_rows": 134,
+      "train_rows": 399
+    }
+  ],
+  "feature_method": "Frozen ImageNet ResNet-18 embeddings from 320x320 fingerprint-only crops.",
+  "private_prediction_dir": "data/processed/subtype_review_completed_2026-09-06/preliminary_subtype_transfer_baseline",
+  "research_limitations": [
+    "Do not use these preliminary metrics as final thesis performance claims.",
+    "Restore or join private subject metadata before final evaluation.",
+    "The whorl task remains strongly imbalanced toward plain_whorl.",
+    "Frozen ImageNet features are a baseline, not a tuned fingerprint-specific model."
+  ],
+  "results_dir": "results/subtype_preliminary_transfer_baseline",
+  "seed": 244664,
+  "source_export_dir": "data/processed/subtype_review_completed_2026-09-06"
+}

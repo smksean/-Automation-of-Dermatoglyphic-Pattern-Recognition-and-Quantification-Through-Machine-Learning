@@ -1,0 +1,3 @@
+task,model,grouped_macro_f1,preliminary_macro_f1,change_after_grouping
+arch,logistic_C1,0.5267058045879448,0.618997,-0.09229119541205522
+whorl,logistic_C0.1,0.4460404980857464,0.464193,-0.018152501914253605

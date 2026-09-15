@@ -1,0 +1,4 @@
+feature,records,points,record_coverage_pct
+Core,2234,2632,93.87
+Delta,2195,2847,92.23
+Minutia,2380,267817,100.0

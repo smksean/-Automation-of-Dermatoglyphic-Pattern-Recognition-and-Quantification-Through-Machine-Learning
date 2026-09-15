@@ -1,0 +1,43 @@
+{
+  "labels": [
+    "plain_whorl",
+    "central_pocket_loop_whorl",
+    "double_loop_whorl"
+  ],
+  "matrices": {
+    "linear_svc_balanced": [
+      [
+        119,
+        2,
+        1
+      ],
+      [
+        5,
+        0,
+        0
+      ],
+      [
+        7,
+        0,
+        0
+      ]
+    ],
+    "majority_baseline": [
+      [
+        122,
+        0,
+        0
+      ],
+      [
+        5,
+        0,
+        0
+      ],
+      [
+        7,
+        0,
+        0
+      ]
+    ]
+  }
+}

@@ -1,0 +1,4 @@
+measure,n,mean,std,min,q1,median,q3,max
+ten-finger examiner minutiae total,199,1129.573,289.579,280.0,931.0,1113.0,1289.5,2010.0
+ten-finger ridge-ending total,199,845.286,276.403,194.0,640.5,802.0,1001.5,1693.0
+ten-finger bifurcation total,199,284.186,103.69,83.0,214.5,272.0,348.5,586.0

@@ -1,0 +1,11 @@
+﻿experiment,model,label,precision,recall,f1_score,support
+whorl_first_pass,majority_baseline,plain_whorl,0.9104477611940298,1.0,0.953125,122.0
+whorl_first_pass,majority_baseline,central_pocket_loop_whorl,0.0,0.0,0.0,5.0
+whorl_first_pass,majority_baseline,double_loop_whorl,0.0,0.0,0.0,7.0
+whorl_first_pass,majority_baseline,macro avg,0.3034825870646766,0.3333333333333333,0.3177083333333333,134.0
+whorl_first_pass,majority_baseline,weighted avg,0.8289151258632211,0.9104477611940298,0.8677705223880597,134.0
+whorl_first_pass,linear_svc_balanced,plain_whorl,0.9083969465648855,0.9754098360655737,0.9407114624505929,122.0
+whorl_first_pass,linear_svc_balanced,central_pocket_loop_whorl,0.0,0.0,0.0,5.0
+whorl_first_pass,linear_svc_balanced,double_loop_whorl,0.0,0.0,0.0,7.0
+whorl_first_pass,linear_svc_balanced,macro avg,0.30279898218829515,0.3251366120218579,0.31357048748353095,134.0
+whorl_first_pass,linear_svc_balanced,weighted avg,0.8270479662754927,0.8880597014925373,0.8564686449177039,134.0

@@ -1,0 +1,13 @@
+﻿experiment,model,label,precision,recall,f1_score,support
+arch_binary,majority_baseline,plain_arch,0.7307692307692307,1.0,0.8444444444444444,19.0
+arch_binary,majority_baseline,tented_arch,0.0,0.0,0.0,7.0
+arch_binary,majority_baseline,macro avg,0.36538461538461536,0.5,0.4222222222222222,26.0
+arch_binary,majority_baseline,weighted avg,0.5340236686390532,0.7307692307692307,0.6170940170940171,26.0
+arch_binary,resnet18_linear_svc_balanced,plain_arch,0.6666666666666666,0.5263157894736842,0.5882352941176471,19.0
+arch_binary,resnet18_linear_svc_balanced,tented_arch,0.18181818181818182,0.2857142857142857,0.2222222222222222,7.0
+arch_binary,resnet18_linear_svc_balanced,macro avg,0.4242424242424242,0.40601503759398494,0.40522875816993464,26.0
+arch_binary,resnet18_linear_svc_balanced,weighted avg,0.5361305361305362,0.46153846153846156,0.489693313222725,26.0
+arch_binary,resnet18_logistic_balanced,plain_arch,0.7222222222222222,0.6842105263157895,0.7027027027027027,19.0
+arch_binary,resnet18_logistic_balanced,tented_arch,0.25,0.2857142857142857,0.26666666666666666,7.0
+arch_binary,resnet18_logistic_balanced,macro avg,0.4861111111111111,0.4849624060150376,0.48468468468468473,26.0
+arch_binary,resnet18_logistic_balanced,weighted avg,0.5950854700854701,0.5769230769230769,0.5853083853083854,26.0

@@ -1,0 +1,7 @@
+{
+  "created_at_utc": "2026-09-11T12:46:50.619156+00:00",
+  "n_repeats": 5,
+  "n_splits": 5,
+  "scope": "non-holdout expert-reviewed subtype prototype; repeated stratified evaluation",
+  "seed": 244664
+}

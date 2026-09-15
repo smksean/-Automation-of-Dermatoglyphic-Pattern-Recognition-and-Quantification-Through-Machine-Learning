@@ -1,0 +1,3 @@
+﻿task,images,subjects,image_class_counts,subject_class_counts
+arch,101,31,"{'plain_arch': 75, 'tented_arch': 26}","{'plain_arch': 25, 'tented_arch': 16}"
+whorl,533,128,"{'central_pocket_loop_whorl': 20, 'double_loop_whorl': 26, 'plain_whorl': 487}","{'central_pocket_loop_whorl': 17, 'double_loop_whorl': 18, 'plain_whorl': 122}"

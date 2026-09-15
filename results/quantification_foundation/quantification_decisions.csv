@@ -1,0 +1,5 @@
+parameter,current_basis,next_validation
+Minutiae,Expert 9.331 coordinates and types,Compare automated detections with examiner points
+Finger ridge count,Expert cores and deltas plus source PNGs,Implement and manually audit core-to-delta crossings
+Total ridge count,Restored subject and finger positions,Freeze ten-finger and whorl-count convention
+Pattern intensity,Expert broad pattern codes,Freeze individual and cohort aggregation formulas

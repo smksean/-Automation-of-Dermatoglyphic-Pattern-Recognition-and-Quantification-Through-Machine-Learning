@@ -8,21 +8,34 @@ data/
 # Generated slide/image exports and local artifacts
 extracted-slide-assets/
 *.zip
+*.7z
+*.tar
+*.tar.gz
 
 # Trained weights and serialized models
 models/*
 !models/efficientnet_320_cv/
 !models/efficientnet_320_cv/SHA256SUMS.txt
 *.joblib
+*.pkl
 *.pth
 *.pt
 *.ckpt
+*.onnx
+*.npy
+*.npz
 
 # Notebook/runtime noise
 .ipynb_checkpoints/
+*_executed.ipynb
 __pycache__/
 *.pyc
 /tmp*/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
 # Environment files
 .env

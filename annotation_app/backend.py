@@ -5,12 +5,10 @@ from __future__ import annotations
 import csv
 import json
 import os
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from collections.abc import Mapping
 from typing import Any, Protocol
-
-from supabase import Client, create_client
 
 from annotation_app.app_logic import validate_annotation
 
@@ -136,7 +134,7 @@ class LocalAnnotationBackend:
                 f"current {current_revision}. Refresh before saving."
             )
 
-        now = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+        now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         saved = {
             "review_id": review_id,
             "confirmed_subtype": annotation["confirmed_subtype"],
@@ -169,7 +167,13 @@ class SupabaseAnnotationBackend:
         bucket: str,
         export_path: str = "exports/subtype_labeling_latest.csv",
     ) -> None:
-        self.client: Client = create_client(url, service_role_key)
+        try:
+            from supabase import create_client
+        except ImportError as exc:
+            raise AnnotationBackendError(
+                "The Supabase backend requires the supabase Python package."
+            ) from exc
+        self.client = create_client(url, service_role_key)
         self.bucket = bucket
         self.export_path = export_path
 

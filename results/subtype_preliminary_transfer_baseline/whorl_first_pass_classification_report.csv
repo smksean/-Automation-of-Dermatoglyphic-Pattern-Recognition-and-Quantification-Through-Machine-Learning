@@ -1,0 +1,16 @@
+﻿experiment,model,label,precision,recall,f1_score,support
+whorl_first_pass,majority_baseline,plain_whorl,0.9104477611940298,1.0,0.953125,122.0
+whorl_first_pass,majority_baseline,central_pocket_loop_whorl,0.0,0.0,0.0,5.0
+whorl_first_pass,majority_baseline,double_loop_whorl,0.0,0.0,0.0,7.0
+whorl_first_pass,majority_baseline,macro avg,0.3034825870646766,0.3333333333333333,0.3177083333333333,134.0
+whorl_first_pass,majority_baseline,weighted avg,0.8289151258632211,0.9104477611940298,0.8677705223880597,134.0
+whorl_first_pass,resnet18_linear_svc_balanced,plain_whorl,0.9140625,0.9590163934426229,0.936,122.0
+whorl_first_pass,resnet18_linear_svc_balanced,central_pocket_loop_whorl,0.0,0.0,0.0,5.0
+whorl_first_pass,resnet18_linear_svc_balanced,double_loop_whorl,0.3333333333333333,0.14285714285714285,0.2,7.0
+whorl_first_pass,resnet18_linear_svc_balanced,macro avg,0.4157986111111111,0.3672911787665886,0.3786666666666667,134.0
+whorl_first_pass,resnet18_linear_svc_balanced,weighted avg,0.8496190920398009,0.8805970149253731,0.8626268656716419,134.0
+whorl_first_pass,resnet18_logistic_balanced,plain_whorl,0.943089430894309,0.9508196721311475,0.9469387755102041,122.0
+whorl_first_pass,resnet18_logistic_balanced,central_pocket_loop_whorl,0.3333333333333333,0.2,0.25,5.0
+whorl_first_pass,resnet18_logistic_balanced,double_loop_whorl,0.375,0.42857142857142855,0.4,7.0
+whorl_first_pass,resnet18_logistic_balanced,macro avg,0.5504742547425474,0.526463700234192,0.5323129251700681,134.0
+whorl_first_pass,resnet18_logistic_balanced,weighted avg,0.890661024147555,0.8955223880597015,0.8923621687480963,134.0

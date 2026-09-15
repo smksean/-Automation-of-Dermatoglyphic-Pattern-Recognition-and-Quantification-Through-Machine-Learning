@@ -27,6 +27,18 @@ Keep these outside Git:
 
 ## Raw Source Data
 
+The refreshed, checksum-verified September 2026 restoration uses a restricted
+archive-first layout. Only SD302g-linked images are extracted, avoiding a full
+expansion of SD302a and SD302b:
+
+| Local path | Purpose | Git status |
+|---|---|---|
+| `data/raw/nist_sd302_2026/archives/` | Verified metadata, errata, SD302a, SD302b, and SD302g delivery files. | Ignored |
+| `data/raw/nist_sd302_2026/linked_images/` | The 2,380 PNGs referenced by SD302g. | Ignored |
+| `data/processed/sd302_2026_restoration/` | Private pattern, EFS-feature, provenance, and subtype-linkage tables. | Ignored |
+
+The earlier fully extracted folder convention was:
+
 The current local folder convention is:
 
 | Local path | Purpose | Git status |
@@ -43,10 +55,10 @@ commit it; store it in the institution-approved private project notes instead.
 
 | Dataset | Approved download/source URL | Notes |
 |---|---|---|
-| NIST SD 302a | TODO: add official non-secret link | Raw fingerprint images. |
-| NIST SD 302b | TODO: add official non-secret link | Raw fingerprint images. |
-| NIST SD 302d | TODO: add official non-secret link if still needed | Retained locally; not central to current broad classifier. |
-| NIST SD 302g EBTS/IRR | TODO: add official non-secret link | Source of `9.307` pattern annotations. |
+| NIST SD 302a | [Official SD302 page](https://www.nist.gov/itl/iad/btg/nist-special-database-302) | Raw fingerprint images; access requires the NIST request agreement. |
+| NIST SD 302b | [Official SD302 page](https://www.nist.gov/itl/iad/btg/nist-special-database-302) | Operator-assisted rolls and slap impressions. |
+| NIST SD 302d | [Official SD302 page](https://www.nist.gov/itl/iad/btg/nist-special-database-302) | Retained locally; not central to the current broad classifier. |
+| NIST SD 302g EBTS/IRR | [Official SD302 page](https://www.nist.gov/itl/iad/btg/nist-special-database-302) | Source of pattern, core, delta, and minutiae annotations. |
 
 ## Label Source
 
@@ -78,6 +90,8 @@ secure copy or regenerated from the raw source data.
 |---|---|---|
 | `data/processed/irr_pattern_entries.csv` | Flattened pattern entries extracted from EBTS field `9.307`. | `notebooks/01_data_prep.ipynb` |
 | `data/processed/irr_image_labels.csv` | Image-level label table after linking EBTS annotations to fingerprint images. | `notebooks/01_data_prep.ipynb` |
+| `data/processed/sd302_2026_restoration/` | Restored archive provenance, all 2,380 image links, 273,296 EFS feature points, and all 637 accepted subtype-to-subject links. | `scripts/restore_sd302_2026.py` |
+| `data/processed/sd302_2026_restoration/quantification_reference/` | Private canonical finger rows and subject-level pattern-intensity/minutiae totals. | `scripts/build_quantification_reference.py`; `notebooks/12_quantification_reference_analysis.ipynb` |
 | `data/processed/roll_broad_model_split.csv` | Subject-disjoint broad-class modelling table. | `notebooks/02_dataset_review_and_split.ipynb` |
 | `data/processed/roll_hog_features.npz` | Feature array for the HOG and linear SVM baseline. | `notebooks/03_model_training_baseline.ipynb` |
 | `data/processed/colab_package/` | 160 x 160 CNN package: image array, metadata, label mapping, and README. | `notebooks/04_cnn_preprocessing_for_colab.ipynb` |
@@ -88,6 +102,7 @@ secure copy or regenerated from the raw source data.
 | `data/broad_classifier_blind_test/` | Private broad-classifier blind-test material. | `scripts/build_broad_classifier_blind_test.py` |
 | `data/processed/client_subtype_relabeling_package/` | Older/broader private relabelling package for arch, whorl, and multi-pattern review. | `scripts/build_client_relabeling_package.py` |
 | `data/processed/unlabeled_subtype_review_package_2026-08-04/` | Active private subtype-review package for generic arch and whorl records. | `scripts/build_unlabeled_subtype_review_package.py` |
+| `data/processed/subtype_review_completed_2026-09-06/` | Private completed Supabase subtype-review export, downloaded review images, accepted/adjudication label tables, cropped fingerprint-only modeling images, and modeling summaries. | `scripts/export_completed_subtype_review_from_supabase.py`; `scripts/prepare_subtype_modeling_dataset.py` |
 
 The EfficientNet package contains the main modelling arrays:
 
@@ -172,10 +187,21 @@ Do not push the raw data or review packages to GitHub. For a new laptop:
    not as completed expert subtype labels.
 6. Continue subtype review through `annotation_app/` and the private Supabase
    backend, or through the local package if cloud storage has not been approved.
-7. After expert review, merge only accepted/adjudicated subtype labels into a
-   new private derived table. Commit only aggregate statistics or non-sensitive
-   code/results unless data-governance approval says otherwise.
+7. Use the restored `subtype_subject_linkage.csv` for grouped subtype validation.
+   Commit only aggregate statistics or non-sensitive code/results unless
+   data-governance approval says otherwise.
 
 The important conceptual split is this: broad classification can already use
 the linked NIST codes; subtype classification should wait for the expert-review
 outputs because generic `AU` and `WU` do not carry exact subtype labels.
+
+## Completed Subtype Review Export
+
+As of 2026-09-06, the private Supabase subtype-review workflow contains 672
+completed annotations: 637 accepted rows and 35 rows requiring adjudication.
+The accepted labels have been exported locally under
+`data/processed/subtype_review_completed_2026-09-06/`, which remains ignored by
+Git because it contains row-level biometric research data.
+
+For the documented modeling state and recommended first-pass subtype scope, see
+[`docs/subtype_modeling_state_2026-09-06.md`](subtype_modeling_state_2026-09-06.md).

@@ -1,0 +1,38 @@
+{
+  "created_at_utc": "2026-09-13T14:50:31.851779+00:00",
+  "seed": 244664,
+  "n_splits": 5,
+  "n_repeats": 5,
+  "splitter": "StratifiedGroupKFold with deterministic class-complete repeat selection",
+  "evaluation_scope": "non-holdout expert-reviewed subtype development; subject-grouped",
+  "selection_metric": "mean macro F1 across 25 grouped folds",
+  "cohorts": {
+    "arch": {
+      "images": 101,
+      "subjects": 31,
+      "image_class_counts": {
+        "plain_arch": 75,
+        "tented_arch": 26
+      },
+      "subject_class_counts": {
+        "plain_arch": 25,
+        "tented_arch": 16
+      }
+    },
+    "whorl": {
+      "images": 533,
+      "subjects": 128,
+      "image_class_counts": {
+        "central_pocket_loop_whorl": 20,
+        "double_loop_whorl": 26,
+        "plain_whorl": 487
+      },
+      "subject_class_counts": {
+        "central_pocket_loop_whorl": 17,
+        "double_loop_whorl": 18,
+        "plain_whorl": 122
+      }
+    }
+  },
+  "maximum_subject_overlap": 0
+}

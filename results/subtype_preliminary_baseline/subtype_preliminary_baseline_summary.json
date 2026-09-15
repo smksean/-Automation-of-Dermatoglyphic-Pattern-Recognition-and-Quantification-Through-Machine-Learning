@@ -1,0 +1,127 @@
+{
+  "created_at_utc": "2026-09-07T11:37:23.512781+00:00",
+  "evaluation_protocol": "preliminary stratified train/test split by accepted subtype label; not subject-disjoint because subject_id is not present in the Supabase export",
+  "experiments": [
+    {
+      "class_counts": {
+        "plain_arch": 75,
+        "tented_arch": 26
+      },
+      "classes": [
+        "plain_arch",
+        "tented_arch"
+      ],
+      "experiment": "arch_binary",
+      "metrics": [
+        {
+          "accuracy": 0.7307692307692307,
+          "balanced_accuracy": 0.5,
+          "experiment": "arch_binary",
+          "macro_f1": 0.4222222222222222,
+          "model": "majority_baseline",
+          "test_class_counts": {
+            "plain_arch": 19,
+            "tented_arch": 7
+          },
+          "test_rows": 26,
+          "train_class_counts": {
+            "plain_arch": 56,
+            "tented_arch": 19
+          },
+          "train_rows": 75,
+          "weighted_f1": 0.6170940170940171
+        },
+        {
+          "accuracy": 0.6923076923076923,
+          "balanced_accuracy": 0.6090225563909775,
+          "experiment": "arch_binary",
+          "macro_f1": 0.6090225563909775,
+          "model": "linear_svc_balanced",
+          "test_class_counts": {
+            "plain_arch": 19,
+            "tented_arch": 7
+          },
+          "test_rows": 26,
+          "train_class_counts": {
+            "plain_arch": 56,
+            "tented_arch": 19
+          },
+          "train_rows": 75,
+          "weighted_f1": 0.6923076923076923
+        }
+      ],
+      "rows": 101,
+      "test_rows": 26,
+      "train_rows": 75
+    },
+    {
+      "class_counts": {
+        "central_pocket_loop_whorl": 20,
+        "double_loop_whorl": 26,
+        "plain_whorl": 487
+      },
+      "classes": [
+        "plain_whorl",
+        "central_pocket_loop_whorl",
+        "double_loop_whorl"
+      ],
+      "experiment": "whorl_first_pass",
+      "metrics": [
+        {
+          "accuracy": 0.9104477611940298,
+          "balanced_accuracy": 0.3333333333333333,
+          "experiment": "whorl_first_pass",
+          "macro_f1": 0.3177083333333333,
+          "model": "majority_baseline",
+          "test_class_counts": {
+            "central_pocket_loop_whorl": 5,
+            "double_loop_whorl": 7,
+            "plain_whorl": 122
+          },
+          "test_rows": 134,
+          "train_class_counts": {
+            "central_pocket_loop_whorl": 15,
+            "double_loop_whorl": 19,
+            "plain_whorl": 365
+          },
+          "train_rows": 399,
+          "weighted_f1": 0.8677705223880597
+        },
+        {
+          "accuracy": 0.8880597014925373,
+          "balanced_accuracy": 0.3251366120218579,
+          "experiment": "whorl_first_pass",
+          "macro_f1": 0.31357048748353095,
+          "model": "linear_svc_balanced",
+          "test_class_counts": {
+            "central_pocket_loop_whorl": 5,
+            "double_loop_whorl": 7,
+            "plain_whorl": 122
+          },
+          "test_rows": 134,
+          "train_class_counts": {
+            "central_pocket_loop_whorl": 15,
+            "double_loop_whorl": 19,
+            "plain_whorl": 365
+          },
+          "train_rows": 399,
+          "weighted_f1": 0.8564686449177039
+        }
+      ],
+      "rows": 533,
+      "test_rows": 134,
+      "train_rows": 399
+    }
+  ],
+  "feature_method": "64x64 autocontrast grayscale pixels, block-mean intensity summaries, and 8x8 cell gradient-orientation histograms from 320x320 cropped inputs",
+  "private_prediction_dir": "data/processed/subtype_review_completed_2026-09-06/preliminary_subtype_baseline",
+  "research_limitations": [
+    "Do not use these preliminary metrics as final thesis performance claims.",
+    "Restore or join private subject metadata before final evaluation.",
+    "Keep row-level predictions and images under data/ because they are biometric research records.",
+    "The whorl task is heavily imbalanced toward plain_whorl."
+  ],
+  "results_dir": "results/subtype_preliminary_baseline",
+  "seed": 244664,
+  "source_export_dir": "data/processed/subtype_review_completed_2026-09-06"
+}

@@ -144,54 +144,86 @@ notebooks/
   05_cnn_training_colab.ipynb
   06_resnet18_finetuning_colab.ipynb
   07_efficientnet_320_grouped_cv_colab.ipynb
+  08_subtype_modeling_preliminary.ipynb
+  09_subtype_model_selection.ipynb
+  10_quantification_data_foundation.ipynb
+  11_subtype_grouped_validation.ipynb
+  12_quantification_reference_analysis.ipynb
 results/
   *.csv
   figures/*.png
+  subtype_grouped_model_selection/
+  quantification_reference/
 docs/
+  repository_maintenance.md
   training_samples/*.png
-relabeling/
-  CLIENT_RELABELING_INSTRUCTIONS.md
 scripts/
-  build_client_relabeling_package.py
-  build_roll_320_clahe_package.py
-  generate_training_sample_gallery.py
+  restore_sd302_2026.py
+  select_subtype_grouped_models.py
+  build_quantification_reference.py
+inference_service/
+web_app/
 ```
 
 The [`results`](results/) directory contains aggregate classification reports, fold summaries, training histories, and non-biometric visualizations. The [`notebooks`](notebooks/) directory provides the ordered analytical workflow.
 
-## Subclass Classification
+## Subtype Classification
 
-The source annotations provide exact subclasses for only a minority of arch and whorl records. A metadata audit established that 59 of the 827 initially flagged records can be resolved conservatively from direct subtype annotations or consistent same-finger evidence. The remaining generic or alternative classifications require expert visual assessment if definitive single-label subtype ground truth is required.
+Expert review produced 672 completed annotations. Of these, 637 accepted rows
+were linked back to 144 restored subject identifiers; 35 adjudication rows stay
+outside clean subtype training. The governing development evaluation uses
+repeated subject-grouped folds with zero subject overlap.
 
-Subclass modelling is treated as an exploratory secondary analysis rather than a validated system for identifying every arch and whorl subtype. It should initially:
+The selected frozen ResNet-18 embedding and logistic-regression prototypes
+reported mean grouped macro F1 values of 0.527 for binary arch subtype
+classification and 0.446 for three-class whorl subtype classification. These
+are exploratory development estimates, not external validation. The deployed
+two-stage application invokes subtype inference only after an eligible broad
+arch or whorl prediction. Full methods and interpretation are recorded in
+[`docs/subtype_modeling_state_2026-09-06.md`](docs/subtype_modeling_state_2026-09-06.md)
+and [`results/subtype_grouped_model_selection/`](results/subtype_grouped_model_selection/).
 
-- retain exact original subtype annotations;
-- model alternative classifications as multi-label evidence;
-- exclude unresolved generic `AU` and `WU` records from definitive subtype supervision;
-- use class weighting and grouped validation for rare subclasses;
-- employ expert review for a smaller, information-rich subset rather than relabelling all 827 images.
+## Quantification
 
-Model-generated pseudo-labels may support review prioritization but must not be represented as examiner-confirmed ground truth.
+The restored SD302 annotations support an auditable descriptive quantification
+layer. Pattern intensity is available for 188 subjects with ten classifiable
+canonical impressions, and examiner-marked minutiae totals are available for
+199 complete ten-finger subjects. Total finger ridge count is not reported as a
+primary endpoint because validated expert ridge-count field `9.322` is absent
+from the restored records. See
+[`docs/quantification_state_2026-09-13.md`](docs/quantification_state_2026-09-13.md)
+and [`results/quantification_reference/`](results/quantification_reference/).
 
 ## Reproducibility
 
-The notebooks are ordered according to the intended execution sequence. Google Colab notebooks mount Drive, extract only the required development artifacts, and verify that locked-holdout files are absent from the runtime. Aggregate experiment outputs are versioned in [`results`](results/); large arrays, full-resolution image collections, archives, subject-level prediction tables, and weights remain outside the current Git tree. For deployment, the app downloads the five frozen broad-classifier checkpoints from an immutable source commit and verifies their sizes and SHA-256 hashes before loading them. The small README gallery can be regenerated locally from the ignored training data with [`scripts/generate_training_sample_gallery.py`](scripts/generate_training_sample_gallery.py).
+The notebooks are ordered according to the intended execution sequence. Google Colab notebooks mount Drive, extract only the required development artifacts, and verify that locked-holdout files are absent from the runtime. Aggregate experiment outputs are versioned in [`results`](results/); large arrays, full-resolution image collections, archives, subject-level prediction tables, executed notebook copies, and weights remain outside the current Git tree. For deployment, the app downloads the five frozen broad-classifier checkpoints from an immutable source commit and verifies their sizes and SHA-256 hashes before loading them. The small README gallery can be regenerated locally from the ignored training data with [`scripts/generate_training_sample_gallery.py`](scripts/generate_training_sample_gallery.py). Repository hygiene and release checks are documented in [`docs/repository_maintenance.md`](docs/repository_maintenance.md).
 
 ## Web Application and Deployment
 
-The implemented broad-pattern application provides a controlled Streamlit interface for dermatoglyphic pattern classification. An authorized user uploads one rolled fingerprint image, after which the application applies the same preprocessing used during model development and returns:
+The primary research web application is a multi-page Next.js interface deployed
+on Vercel, backed by a private FastAPI inference service on Render. An
+authorized server-side proxy submits one rolled fingerprint image as a
+short-lived background job and polls for completion, avoiding synchronous
+platform timeouts while keeping the API credential out of browser code. The
+application returns:
 
 - the predicted broad pattern class;
 - the model confidence score;
-- a clear indication that the result is generated by a research model; and
+- a clear indication that the result is generated by a research model;
 - a visualization of all four class probabilities;
 - agreement across the five grouped-cross-validation checkpoints;
 - the margin between the two leading classes; and
-- the deterministic 320 × 320 model-input preview.
+- a conditional arch or whorl subtype estimate when eligible.
 
 The application uses a frozen five-checkpoint EfficientNet-B0 ensemble and a fixed inference pipeline. Uploaded biometric images are processed transiently in memory and are not retained by default. The displayed probability is a model score rather than a calibrated guarantee of correctness. The application is a research prototype and must not be represented as a forensic identification system.
 
-The implementation, local instructions, and deployment settings are documented in [`broad_classifier/`](broad_classifier/). The private expert subtype-review application remains separate under [`annotation_app/`](annotation_app/).
+The production interface is available at
+[`webapp-nine-delta-34.vercel.app`](https://webapp-nine-delta-34.vercel.app).
+Implementation and deployment instructions are documented in [`web_app/`](web_app/)
+and [`inference_service/`](inference_service/). The Streamlit broad classifier
+remains under [`broad_classifier/`](broad_classifier/) as a local reference
+interface, while the private expert subtype-review application remains separate
+under [`annotation_app/`](annotation_app/).
 
 ## Ethical and Data-Governance Considerations
 
