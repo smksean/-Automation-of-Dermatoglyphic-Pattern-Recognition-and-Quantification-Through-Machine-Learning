@@ -16,7 +16,7 @@ COPY inference_service inference_service
 
 RUN groupadd --gid 1000 appsecrets && \
     useradd --create-home --uid 10001 --gid 1000 appuser && \
-    chown -R appuser:appuser /service
+    chown -R appuser:appsecrets /service
 USER appuser
 
 EXPOSE 7860
