@@ -17,6 +17,8 @@ from inference_service.app import (
     SUBTYPE_ARTIFACT_SHA256,
     _materialize_subtype_secrets,
     app,
+    jobs,
+    jobs_lock,
 )
 
 
@@ -31,6 +33,8 @@ def png_bytes() -> bytes:
 class InferenceServiceTests(unittest.TestCase):
     def setUp(self) -> None:
         self.client = TestClient(app)
+        with jobs_lock:
+            jobs.clear()
 
     def test_health_does_not_require_authentication(self) -> None:
         with patch("inference_service.app.subtype_available", return_value=True):
@@ -75,6 +79,26 @@ class InferenceServiceTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), expected)
         self.assertEqual(response.headers["cache-control"], "no-store")
+
+    def test_background_job_returns_completed_prediction(self) -> None:
+        expected = {
+            "predictedClass": "arch",
+            "score": 0.9,
+            "subtype": None,
+        }
+        with patch("inference_service.app.runtime.predict", return_value=expected):
+            submitted = self.client.post(
+                "/jobs",
+                files={"image": ("print.png", png_bytes(), "image/png")},
+            )
+        self.assertEqual(submitted.status_code, 202)
+        job_id = submitted.json()["jobId"]
+
+        completed = self.client.get(f"/jobs/{job_id}")
+        self.assertEqual(completed.status_code, 200)
+        self.assertEqual(completed.json()["status"], "complete")
+        self.assertEqual(completed.json()["result"], expected)
+        self.assertEqual(completed.headers["cache-control"], "no-store")
 
     def test_predict_rejects_unsupported_content_type(self) -> None:
         response = self.client.post(

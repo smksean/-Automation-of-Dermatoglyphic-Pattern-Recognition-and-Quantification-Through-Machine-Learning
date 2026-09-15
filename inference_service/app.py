@@ -5,6 +5,8 @@ from __future__ import annotations
 import base64
 import hmac
 import gc
+import logging
+import secrets
 from contextlib import asynccontextmanager
 from hashlib import sha256
 import os
@@ -15,7 +17,16 @@ from typing import Any, Optional
 
 import numpy as np
 import torch
-from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile, status
+from fastapi import (
+    BackgroundTasks,
+    Depends,
+    FastAPI,
+    File,
+    Header,
+    HTTPException,
+    UploadFile,
+    status,
+)
 from fastapi.responses import JSONResponse
 
 from broad_classifier.app_logic import assess_prediction, assess_subtype_prediction
@@ -51,6 +62,9 @@ SUBTYPE_ARTIFACT_SHA256 = {
     "arch": "3cd758560fe43364a1732a00fe9fe02a31153e8a0c80771babcbee2710b6d817",
     "whorl": "56397dbb25309f9edfa40fbce010336d2a1a244aaa6fae62358893c35114dc74",
 }
+JOB_TTL_SECONDS = 10 * 60
+MAX_ACTIVE_JOBS = 2
+logger = logging.getLogger(__name__)
 
 
 def _model_directory() -> Path:
@@ -226,6 +240,8 @@ class ModelRuntime:
 
 
 runtime = ModelRuntime()
+jobs: dict[str, dict[str, Any]] = {}
+jobs_lock = threading.Lock()
 
 
 @asynccontextmanager
@@ -255,6 +271,54 @@ def require_api_token(authorization: Optional[str] = Header(default=None)) -> No
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
 
 
+def _read_validated_upload(image: UploadFile) -> bytes:
+    if image.content_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="Unsupported image format. Use PNG, JPEG, or TIFF.",
+        )
+    image_bytes = image.file.read(MAX_UPLOAD_BYTES + 1)
+    if len(image_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail="The deployment upload limit is 4 MB per image.",
+        )
+    return image_bytes
+
+
+def _prune_finished_jobs(now: float) -> None:
+    expired = [
+        job_id
+        for job_id, job in jobs.items()
+        if job["status"] in {"complete", "failed"}
+        and now - job["updatedAt"] > JOB_TTL_SECONDS
+    ]
+    for job_id in expired:
+        del jobs[job_id]
+
+
+def _run_prediction_job(job_id: str, image_bytes: bytes) -> None:
+    with jobs_lock:
+        jobs[job_id].update(status="running", updatedAt=time.monotonic())
+    try:
+        result = runtime.predict(image_bytes)
+    except Exception:
+        logger.exception("Background inference job %s failed", job_id)
+        with jobs_lock:
+            jobs[job_id].update(
+                status="failed",
+                error="The inference service could not complete this analysis.",
+                updatedAt=time.monotonic(),
+            )
+    else:
+        with jobs_lock:
+            jobs[job_id].update(
+                status="complete",
+                result=result,
+                updatedAt=time.monotonic(),
+            )
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     subtype_directory = _subtype_directory()
@@ -268,18 +332,7 @@ def health() -> dict[str, Any]:
 
 @app.post("/predict", dependencies=[Depends(require_api_token)])
 def predict(image: UploadFile = File(...)) -> JSONResponse:
-    if image.content_type not in ALLOWED_CONTENT_TYPES:
-        raise HTTPException(
-            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
-            detail="Unsupported image format. Use PNG, JPEG, or TIFF.",
-        )
-
-    image_bytes = image.file.read(MAX_UPLOAD_BYTES + 1)
-    if len(image_bytes) > MAX_UPLOAD_BYTES:
-        raise HTTPException(
-            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            detail="The deployment upload limit is 4 MB per image.",
-        )
+    image_bytes = _read_validated_upload(image)
 
     try:
         payload = runtime.predict(image_bytes)
@@ -291,4 +344,45 @@ def predict(image: UploadFile = File(...)) -> JSONResponse:
             detail="The model service could not complete this request.",
         ) from exc
 
+    return JSONResponse(payload, headers={"Cache-Control": "no-store"})
+
+
+@app.post("/jobs", dependencies=[Depends(require_api_token)], status_code=202)
+def create_job(
+    background_tasks: BackgroundTasks,
+    image: UploadFile = File(...),
+) -> JSONResponse:
+    image_bytes = _read_validated_upload(image)
+    now = time.monotonic()
+    with jobs_lock:
+        _prune_finished_jobs(now)
+        active_jobs = sum(
+            job["status"] in {"queued", "running"} for job in jobs.values()
+        )
+        if active_jobs >= MAX_ACTIVE_JOBS:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="The research inference service is busy. Try again shortly.",
+            )
+        job_id = secrets.token_urlsafe(18)
+        jobs[job_id] = {"status": "queued", "updatedAt": now}
+    background_tasks.add_task(_run_prediction_job, job_id, image_bytes)
+    return JSONResponse(
+        {"jobId": job_id, "status": "queued"},
+        status_code=status.HTTP_202_ACCEPTED,
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.get("/jobs/{job_id}", dependencies=[Depends(require_api_token)])
+def get_job(job_id: str) -> JSONResponse:
+    with jobs_lock:
+        _prune_finished_jobs(time.monotonic())
+        job = jobs.get(job_id)
+        if job is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Analysis job not found.",
+            )
+        payload = {key: value for key, value in job.items() if key != "updatedAt"}
     return JSONResponse(payload, headers={"Cache-Control": "no-store"})

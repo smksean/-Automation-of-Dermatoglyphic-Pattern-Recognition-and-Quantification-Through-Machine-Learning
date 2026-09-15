@@ -58,8 +58,11 @@ INFERENCE_API_URL=http://127.0.0.1:8000
 ```
 
 The Next.js `/api/predict` route validates one PNG, JPEG, or TIFF image up to
-4 MB and forwards it to `<INFERENCE_API_URL>/predict`. The backend must return
-the typed broad/subtype response declared in `lib/prediction.ts`.
+4 MB and submits it to `<INFERENCE_API_URL>/jobs`. The browser polls
+`/api/predict/[jobId]` until the background analysis completes, keeping slow
+research inference outside Vercel's synchronous request-duration limit. The
+backend ultimately returns the typed broad/subtype response declared in
+`lib/prediction.ts`.
 
 Uploaded images are not written to disk by the frontend. A production backend
 must preserve the same transient-processing and no-logging contract.

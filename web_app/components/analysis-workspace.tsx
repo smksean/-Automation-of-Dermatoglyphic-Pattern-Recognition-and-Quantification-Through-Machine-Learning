@@ -21,6 +21,19 @@ import {
 
 const ACCEPTED_TYPES = new Set(["image/png", "image/jpeg", "image/tiff"]);
 const MAX_FILE_BYTES = 4 * 1024 * 1024;
+const POLL_INTERVAL_MS = 2000;
+const MAX_POLL_ATTEMPTS = 120;
+
+type JobSubmission = { jobId: string; status: "queued" | "running" };
+type JobStatus = {
+  status: "queued" | "running" | "complete" | "failed";
+  result?: PredictionResponse;
+  error?: string;
+};
+
+function wait(milliseconds: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
 
 function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
@@ -50,6 +63,7 @@ export function AnalysisWorkspace() {
   const [status, setStatus] = useState<"idle" | "ready" | "running" | "result" | "error">("idle");
   const [error, setError] = useState<ApiError | null>(null);
   const [result, setResult] = useState<PredictionResponse | null>(null);
+  const [analysisProgress, setAnalysisProgress] = useState("Preparing analysis");
 
   useEffect(() => () => {
     if (previewUrlRef.current) URL.revokeObjectURL(previewUrlRef.current);
@@ -107,19 +121,53 @@ export function AnalysisWorkspace() {
   async function analyze() {
     if (!file) return;
     setStatus("running");
+    setAnalysisProgress("Submitting fingerprint securely");
     setError(null);
     const body = new FormData();
     body.append("image", file);
     try {
       const response = await fetch("/api/predict", { method: "POST", body });
-      const payload = (await response.json()) as PredictionResponse | ApiError;
+      const payload = (await response.json()) as JobSubmission | ApiError;
       if (!response.ok) {
         setError(payload as ApiError);
         setStatus("error");
         return;
       }
-      setResult(payload as PredictionResponse);
-      setStatus("result");
+      const { jobId } = payload as JobSubmission;
+      setAnalysisProgress("Running two-stage model analysis");
+
+      for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt += 1) {
+        await wait(POLL_INTERVAL_MS);
+        const jobResponse = await fetch(`/api/predict/${jobId}`, { cache: "no-store" });
+        const job = (await jobResponse.json()) as JobStatus | ApiError;
+        if (!jobResponse.ok) {
+          setError(job as ApiError);
+          setStatus("error");
+          return;
+        }
+        const jobStatus = job as JobStatus;
+        if (jobStatus.status === "complete" && jobStatus.result) {
+          setResult(jobStatus.result);
+          setStatus("result");
+          return;
+        }
+        if (jobStatus.status === "failed") {
+          setError({ error: "Analysis request failed.", detail: jobStatus.error });
+          setStatus("error");
+          return;
+        }
+        setAnalysisProgress(
+          jobStatus.status === "queued"
+            ? "Waiting for the inference service"
+            : "Running two-stage model analysis",
+        );
+      }
+
+      setError({
+        error: "Analysis is taking longer than expected.",
+        detail: "Submit the image again after the inference service becomes available.",
+      });
+      setStatus("error");
     } catch {
       setError({ error: "Analysis request failed.", detail: "The selected image remains only in this browser session." });
       setStatus("error");
@@ -185,14 +233,14 @@ export function AnalysisWorkspace() {
 
           <button className="button button-primary analyze-button" type="button" disabled={!file || status === "running"} onClick={analyze}>
             {status === "running" ? <LoaderCircle className="spin" size={18} /> : <ScanLine size={18} />}
-            {status === "running" ? "Running two-stage analysis" : "Analyze fingerprint"}
+            {status === "running" ? analysisProgress : "Analyze fingerprint"}
           </button>
         </div>
 
         <div className="report-panel" aria-live="polite">
           <div className="tool-header">
             <div><span>02</span><strong>Analysis report</strong></div>
-            <small>{status === "result" ? "Complete" : "Awaiting analysis"}</small>
+            <small>{status === "result" ? "Complete" : status === "running" ? "Processing" : "Awaiting analysis"}</small>
           </div>
 
           {!result ? (

@@ -56,6 +56,12 @@ used by subtype training. Complete two-stage requests are serialized so
 overlapping uploads cannot multiply model memory on the single-worker research
 deployment.
 
+The web application uses `POST /jobs` followed by authenticated polling of
+`GET /jobs/{job_id}`. At most two jobs may be queued or running. Completed job
+records expire after ten minutes, and uploaded image bytes are released after
+inference without being written to disk. The synchronous `POST /predict`
+endpoint remains available for local verification.
+
 Configure the Vercel project with the backend URL and the same token:
 
 ```text

@@ -4,7 +4,7 @@ const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/tiff"]);
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 30;
 
 export async function POST(request: Request) {
   const inferenceUrl = process.env.INFERENCE_API_URL?.replace(/\/$/, "");
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     const headers = new Headers();
     const inferenceToken = process.env.INFERENCE_API_TOKEN;
     if (inferenceToken) headers.set("Authorization", `Bearer ${inferenceToken}`);
-    const response = await fetch(`${inferenceUrl}/predict`, {
+    const response = await fetch(`${inferenceUrl}/jobs`, {
       method: "POST",
       body: upstreamBody,
       headers,
