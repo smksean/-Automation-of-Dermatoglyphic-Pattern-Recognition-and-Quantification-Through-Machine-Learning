@@ -19,7 +19,7 @@ from broad_classifier.inference import (
     image_to_tensor,
     preprocess_image,
 )
-from broad_classifier.app_logic import assess_prediction
+from broad_classifier.app_logic import assess_prediction, assess_subtype_prediction
 from broad_classifier.inference import PredictionResult
 from broad_classifier.model_assets import (
     CheckpointAsset,
@@ -116,6 +116,27 @@ class BroadClassifierInferenceTests(unittest.TestCase):
             top_two_margin=0.87,
         )
         self.assertFalse(assess_prediction(result).needs_review)
+
+    def test_subtype_assessment_flags_low_confidence_and_upstream_risk(self) -> None:
+        assessment = assess_subtype_prediction(
+            "tented_arch",
+            0.62,
+            broad_prediction_needs_review=True,
+        )
+        self.assertTrue(assessment.needs_review)
+        self.assertEqual(len(assessment.reasons), 2)
+
+    def test_subtype_assessment_flags_minority_whorl_prediction(self) -> None:
+        assessment = assess_subtype_prediction(
+            "double_loop_whorl",
+            0.91,
+        )
+        self.assertTrue(assessment.needs_review)
+        self.assertEqual(len(assessment.reasons), 1)
+
+    def test_subtype_assessment_accepts_high_score_plain_arch(self) -> None:
+        assessment = assess_subtype_prediction("plain_arch", 0.91)
+        self.assertFalse(assessment.needs_review)
 
     def test_checkpoint_download_is_verified_and_cached(self) -> None:
         payload = b"small deterministic checkpoint fixture"

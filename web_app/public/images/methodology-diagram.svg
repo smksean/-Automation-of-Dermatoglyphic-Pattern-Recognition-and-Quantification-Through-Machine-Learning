@@ -1,0 +1,157 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title description">
+  <title id="title">Two-stage fingerprint pattern and subtype classification workflow</title>
+  <desc id="description">A publication-style technical diagram showing deterministic fingerprint preprocessing, five-fold broad-pattern ensemble inference, conditional arch and whorl subtype models, and separate validation evidence.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#444444"/>
+    </marker>
+    <style>
+      .figure-title { font: 600 30px Arial, Helvetica, sans-serif; fill: #111111; }
+      .figure-subtitle { font: 400 16px Arial, Helvetica, sans-serif; fill: #4a4a4a; }
+      .panel-letter { font: 700 24px Arial, Helvetica, sans-serif; fill: #111111; }
+      .panel-title { font: 600 20px Arial, Helvetica, sans-serif; fill: #111111; }
+      .box-title { font: 600 17px Arial, Helvetica, sans-serif; fill: #111111; }
+      .body { font: 400 15px Arial, Helvetica, sans-serif; fill: #333333; }
+      .small { font: 400 13px Arial, Helvetica, sans-serif; fill: #555555; }
+      .metric { font: 600 18px Arial, Helvetica, sans-serif; fill: #111111; }
+      .box { fill: #ffffff; stroke: #555555; stroke-width: 1.5; }
+      .broad { fill: #ffffff; stroke: #0072b2; stroke-width: 2; }
+      .subtype { fill: #ffffff; stroke: #d55e00; stroke-width: 2; }
+      .neutral { fill: #f4f4f4; stroke: #777777; stroke-width: 1.5; }
+      .connector { fill: none; stroke: #444444; stroke-width: 1.8; marker-end: url(#arrow); }
+      .branch { fill: none; stroke: #666666; stroke-width: 1.5; }
+      .rule { stroke: #b8b8b8; stroke-width: 1; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="1000" fill="#ffffff"/>
+
+  <text x="56" y="54" class="figure-title">Two-stage fingerprint pattern and subtype classification workflow</text>
+  <text x="56" y="82" class="figure-subtitle">Deterministic inference pipeline used by the research application</text>
+  <line x1="56" y1="102" x2="1544" y2="102" class="rule"/>
+
+  <line x1="1250" y1="51" x2="1290" y2="51" stroke="#0072b2" stroke-width="4"/>
+  <text x="1300" y="56" class="small">Broad-pattern stage</text>
+  <line x1="1250" y1="77" x2="1290" y2="77" stroke="#d55e00" stroke-width="4"/>
+  <text x="1300" y="82" class="small">Subtype prototype stage</text>
+
+  <text x="56" y="142" class="panel-letter">A</text>
+  <text x="92" y="142" class="panel-title">Input and deterministic preprocessing</text>
+
+  <rect x="56" y="166" width="244" height="124" class="box"/>
+  <text x="76" y="197" class="box-title">Rolled impression</text>
+  <text x="76" y="226" class="body">One image per request</text>
+  <text x="76" y="251" class="body">PNG, JPEG, or TIFF</text>
+  <text x="76" y="276" class="small">Transient in-memory handling</text>
+
+  <path d="M300 228 H334" class="connector"/>
+
+  <rect x="348" y="166" width="244" height="124" class="box"/>
+  <text x="368" y="197" class="box-title">Input checks</text>
+  <text x="368" y="226" class="body">Decode as grayscale</text>
+  <text x="368" y="251" class="body">Validate format and size</text>
+  <text x="368" y="276" class="small">Reject corrupt or unsafe input</text>
+
+  <path d="M592 228 H626" class="connector"/>
+
+  <rect x="640" y="166" width="244" height="124" class="box"/>
+  <text x="660" y="197" class="box-title">Foreground crop</text>
+  <text x="660" y="226" class="body">Intensity &lt; 245</text>
+  <text x="660" y="251" class="body">Density &gt; 0.01</text>
+  <text x="660" y="276" class="small">Add 6% safety margin</text>
+
+  <path d="M884 228 H918" class="connector"/>
+
+  <rect x="932" y="166" width="280" height="124" class="box"/>
+  <text x="952" y="197" class="box-title">Contrast and resize</text>
+  <text x="952" y="226" class="body">CLAHE: 2.0; 12 x 12 tiles</text>
+  <text x="952" y="251" class="body">Preserve aspect ratio</text>
+  <text x="952" y="276" class="small">White 320 x 320 canvas</text>
+
+  <path d="M1212 228 H1246" class="connector"/>
+
+  <rect x="1260" y="166" width="284" height="124" class="box"/>
+  <text x="1280" y="197" class="box-title">Model tensor</text>
+  <text x="1280" y="226" class="body">Replicate grayscale to RGB</text>
+  <text x="1280" y="251" class="body">ImageNet normalization</text>
+  <text x="1280" y="276" class="small">No random inference transforms</text>
+
+  <line x1="56" y1="322" x2="1544" y2="322" class="rule"/>
+  <text x="56" y="362" class="panel-letter">B</text>
+  <text x="92" y="362" class="panel-title">Broad-pattern classification</text>
+
+  <rect x="56" y="386" width="690" height="168" class="broad"/>
+  <rect x="56" y="386" width="8" height="168" fill="#0072b2"/>
+  <text x="84" y="420" class="box-title">Five-checkpoint EfficientNet-B0 ensemble</text>
+  <text x="84" y="451" class="body">Each fold model produces a four-class softmax probability vector.</text>
+  <text x="84" y="478" class="body">The application averages the five vectors and records fold agreement.</text>
+  <text x="84" y="518" class="small">Classifier head: Dropout(0.35) + Linear(1280, 4)</text>
+
+  <g transform="translate(498 418)">
+    <rect x="0" y="0" width="36" height="28" class="neutral"/><text x="18" y="19" text-anchor="middle" class="small">F1</text>
+    <rect x="44" y="0" width="36" height="28" class="neutral"/><text x="62" y="19" text-anchor="middle" class="small">F2</text>
+    <rect x="88" y="0" width="36" height="28" class="neutral"/><text x="106" y="19" text-anchor="middle" class="small">F3</text>
+    <rect x="132" y="0" width="36" height="28" class="neutral"/><text x="150" y="19" text-anchor="middle" class="small">F4</text>
+    <rect x="176" y="0" width="36" height="28" class="neutral"/><text x="194" y="19" text-anchor="middle" class="small">F5</text>
+  </g>
+
+  <path d="M746 470 H806" class="connector"/>
+
+  <rect x="820" y="386" width="724" height="168" class="broad"/>
+  <text x="844" y="420" class="box-title">Broad output and decision point</text>
+  <text x="844" y="457" class="body">Arch</text>
+  <text x="1020" y="457" class="body">Left-slant loop</text>
+  <text x="1214" y="457" class="body">Right-slant loop</text>
+  <text x="1428" y="457" class="body">Whorl</text>
+  <line x1="844" y1="477" x2="1520" y2="477" class="rule"/>
+  <text x="844" y="507" class="small">Report mean model score, all class probabilities, fold agreement, and top-two margin.</text>
+  <text x="844" y="534" class="small">Low score, low agreement, or small margin triggers manual-review guidance.</text>
+
+  <path d="M1182 554 V584 H450" class="branch"/>
+  <path d="M1182 584 H1330" class="branch"/>
+  <path d="M450 584 V612" class="connector"/>
+  <path d="M800 584 V612" class="connector"/>
+  <path d="M1330 584 V612" class="connector"/>
+
+  <text x="56" y="610" class="panel-letter">C</text>
+  <text x="92" y="610" class="panel-title">Conditional subtype stage</text>
+
+  <rect x="56" y="628" width="428" height="154" class="subtype"/>
+  <rect x="56" y="628" width="8" height="154" fill="#d55e00"/>
+  <text x="82" y="658" class="small">BROAD RESULT: ARCH</text>
+  <text x="82" y="688" class="box-title">Arch subtype classifier</text>
+  <text x="82" y="718" class="body">Frozen ResNet-18 embeddings</text>
+  <text x="82" y="744" class="body">Balanced logistic regression; C = 1</text>
+  <text x="82" y="770" class="small">Plain arch | Tented arch</text>
+
+  <rect x="586" y="628" width="428" height="154" class="neutral"/>
+  <text x="612" y="658" class="small">BROAD RESULT: LEFT OR RIGHT LOOP</text>
+  <text x="612" y="688" class="box-title">No subtype classifier</text>
+  <text x="612" y="718" class="body">Retain the broad ensemble result.</text>
+  <text x="612" y="744" class="body">Loop subtype development is outside</text>
+  <text x="612" y="770" class="small">the scope of the current study.</text>
+
+  <rect x="1116" y="628" width="428" height="154" class="subtype"/>
+  <rect x="1116" y="628" width="8" height="154" fill="#d55e00"/>
+  <text x="1142" y="658" class="small">BROAD RESULT: WHORL</text>
+  <text x="1142" y="688" class="box-title">Whorl subtype classifier</text>
+  <text x="1142" y="718" class="body">Frozen ResNet-18 embeddings</text>
+  <text x="1142" y="744" class="body">Balanced logistic regression; C = 0.1</text>
+  <text x="1142" y="770" class="small">Plain | Central pocket loop | Double loop</text>
+
+  <line x1="56" y1="814" x2="1544" y2="814" class="rule"/>
+  <text x="56" y="854" class="panel-letter">D</text>
+  <text x="92" y="854" class="panel-title">Evaluation evidence and interpretation scope</text>
+
+  <rect x="56" y="878" width="720" height="82" class="broad"/>
+  <text x="76" y="906" class="box-title">Broad-pattern development</text>
+  <text x="76" y="934" class="body">5-fold subject-grouped OOF | 1,281 images | 110 subjects | 91.73% accuracy | 88.90% macro F1</text>
+  <text x="76" y="952" class="small">Development estimate; not an independent deployment-performance claim</text>
+
+  <rect x="824" y="878" width="720" height="82" class="subtype"/>
+  <text x="844" y="906" class="box-title">Subtype prototype</text>
+  <text x="844" y="934" class="body">Arch: n = 101 / 31 subjects, macro F1 = 0.527 | Whorl: n = 533 / 128 subjects, macro F1 = 0.446</text>
+  <text x="844" y="952" class="small">Expert-reviewed development labels; repeated subject-grouped CV; minority subtypes require review</text>
+
+  <text x="56" y="988" class="small">Figure note. Scores are research outputs, not identity determinations or autonomous forensic conclusions.</text>
+</svg>

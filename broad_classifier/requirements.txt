@@ -2,5 +2,6 @@ streamlit==1.60.0
 numpy==2.5.1
 opencv-python-headless==5.0.0.93
 pillow==12.3.0
+scikit-learn==1.5.2
 torch==2.13.0
 torchvision==0.28.0

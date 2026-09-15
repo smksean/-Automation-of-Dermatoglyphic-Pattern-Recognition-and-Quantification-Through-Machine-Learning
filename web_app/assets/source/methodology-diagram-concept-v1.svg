@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980" role="img" aria-labelledby="title description">
+  <title id="title">Two-stage fingerprint pattern and subtype classification methodology</title>
+  <desc id="description">A rolled fingerprint is validated and preprocessed, classified by a five-fold EfficientNet-B0 broad-pattern ensemble, and conditionally passed to an arch or whorl subtype classifier. Broad and subtype validation evidence are reported separately.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#2f665d"/>
+    </marker>
+    <style>
+      .title { font: 700 40px Inter, Arial, sans-serif; fill: #16332e; }
+      .subtitle { font: 400 19px Inter, Arial, sans-serif; fill: #5d706c; }
+      .eyebrow { font: 700 14px Inter, Arial, sans-serif; fill: #247565; letter-spacing: 1.4px; }
+      .node-title { font: 700 22px Inter, Arial, sans-serif; fill: #17342f; }
+      .node-copy { font: 400 16px Inter, Arial, sans-serif; fill: #536965; }
+      .node-small { font: 600 14px Inter, Arial, sans-serif; fill: #536965; }
+      .metric { font: 700 23px Inter, Arial, sans-serif; fill: #17342f; }
+      .metric-label { font: 400 14px Inter, Arial, sans-serif; fill: #536965; }
+      .step { font: 700 16px Inter, Arial, sans-serif; fill: #ffffff; }
+      .box { fill: #ffffff; stroke: #c9d9d5; stroke-width: 2; rx: 8; }
+      .box-green { fill: #eef8f4; stroke: #85b9ad; stroke-width: 2; rx: 8; }
+      .box-blue { fill: #eef4f7; stroke: #9bb6c1; stroke-width: 2; rx: 8; }
+      .box-coral { fill: #fff2ee; stroke: #df9a87; stroke-width: 2; rx: 8; }
+      .line { fill: none; stroke: #2f665d; stroke-width: 3; marker-end: url(#arrow); }
+      .branch { fill: none; stroke: #7b9892; stroke-width: 2.5; }
+      .divider { stroke: #d5e1de; stroke-width: 1.5; }
+    </style>
+  </defs>
+
+  <rect width="1600" height="980" fill="#f7faf9"/>
+  <rect x="0" y="0" width="1600" height="12" fill="#247565"/>
+
+  <text x="64" y="74" class="eyebrow">METHODOLOGY OVERVIEW</text>
+  <text x="64" y="124" class="title">Two-stage dermatoglyphic classification pipeline</text>
+  <text x="64" y="158" class="subtitle">Deterministic image preparation, broad-pattern ensemble inference, and conditional subtype prediction</text>
+
+  <rect x="64" y="210" width="250" height="170" class="box"/>
+  <circle cx="96" cy="242" r="19" fill="#247565"/>
+  <text x="96" y="248" text-anchor="middle" class="step">1</text>
+  <text x="128" y="250" class="node-title">Input</text>
+  <text x="88" y="296" class="node-copy">One rolled fingerprint</text>
+  <text x="88" y="324" class="node-copy">PNG, JPEG, or TIFF</text>
+  <text x="88" y="352" class="node-small">Validated and decoded in memory</text>
+
+  <path d="M 314 295 L 356 295" class="line"/>
+
+  <rect x="370" y="210" width="350" height="170" class="box-green"/>
+  <circle cx="402" cy="242" r="19" fill="#247565"/>
+  <text x="402" y="248" text-anchor="middle" class="step">2</text>
+  <text x="434" y="250" class="node-title">Preprocessing</text>
+  <text x="394" y="292" class="node-copy">Foreground crop + 6% margin</text>
+  <text x="394" y="320" class="node-copy">CLAHE: 2.0, 12 x 12 tiles</text>
+  <text x="394" y="348" class="node-copy">Aspect-preserved 320 x 320 canvas</text>
+
+  <path d="M 720 295 L 762 295" class="line"/>
+
+  <rect x="776" y="210" width="380" height="170" class="box-blue"/>
+  <circle cx="808" cy="242" r="19" fill="#247565"/>
+  <text x="808" y="248" text-anchor="middle" class="step">3</text>
+  <text x="840" y="250" class="node-title">Broad ensemble</text>
+  <text x="800" y="292" class="node-copy">Five EfficientNet-B0 checkpoints</text>
+  <text x="800" y="320" class="node-copy">Four-class softmax per checkpoint</text>
+  <text x="800" y="348" class="node-small">Mean probabilities + fold agreement</text>
+
+  <path d="M 1156 295 L 1198 295" class="line"/>
+
+  <rect x="1212" y="210" width="324" height="170" class="box"/>
+  <circle cx="1244" cy="242" r="19" fill="#247565"/>
+  <text x="1244" y="248" text-anchor="middle" class="step">4</text>
+  <text x="1276" y="250" class="node-title">Broad result</text>
+  <text x="1236" y="292" class="node-copy">Arch | Left-slant loop</text>
+  <text x="1236" y="320" class="node-copy">Right-slant loop | Whorl</text>
+  <text x="1236" y="348" class="node-small">Leading mean probability reported</text>
+
+  <path d="M 1374 380 L 1374 420 L 288 420" class="branch"/>
+  <path d="M 288 420 L 288 464" class="line"/>
+  <path d="M 800 420 L 800 464" class="line"/>
+  <path d="M 1316 420 L 1316 464" class="line"/>
+
+  <rect x="82" y="478" width="412" height="220" class="box-green"/>
+  <text x="106" y="514" class="eyebrow">IF BROAD RESULT = ARCH</text>
+  <text x="106" y="552" class="node-title">Arch subtype model</text>
+  <text x="106" y="590" class="node-copy">Frozen ImageNet ResNet-18 embeddings</text>
+  <text x="106" y="618" class="node-copy">Balanced logistic regression, C = 1</text>
+  <line x1="106" y1="642" x2="470" y2="642" class="divider"/>
+  <text x="106" y="674" class="node-small">Plain arch | Tented arch</text>
+
+  <rect x="594" y="478" width="412" height="220" class="box"/>
+  <text x="618" y="514" class="eyebrow">IF BROAD RESULT = LOOP</text>
+  <text x="618" y="552" class="node-title">Broad result only</text>
+  <text x="618" y="590" class="node-copy">Left- and right-slant loop categories</text>
+  <text x="618" y="618" class="node-copy">retain the broad ensemble output.</text>
+  <line x1="618" y1="642" x2="982" y2="642" class="divider"/>
+  <text x="618" y="674" class="node-small">No loop subtype model in current scope</text>
+
+  <rect x="1106" y="478" width="430" height="220" class="box-coral"/>
+  <text x="1130" y="514" class="eyebrow">IF BROAD RESULT = WHORL</text>
+  <text x="1130" y="552" class="node-title">Whorl subtype model</text>
+  <text x="1130" y="590" class="node-copy">Frozen ImageNet ResNet-18 embeddings</text>
+  <text x="1130" y="618" class="node-copy">Balanced logistic regression, C = 0.1</text>
+  <line x1="1130" y1="642" x2="1512" y2="642" class="divider"/>
+  <text x="1130" y="674" class="node-small">Plain | Central pocket loop | Double loop</text>
+
+  <text x="64" y="764" class="eyebrow">EVIDENCE REPORTED SEPARATELY</text>
+
+  <rect x="64" y="788" width="724" height="142" class="box-green"/>
+  <text x="88" y="824" class="node-title">Broad-pattern development evidence</text>
+  <text x="88" y="854" class="node-copy">Five-fold subject-grouped out-of-fold evaluation</text>
+  <text x="88" y="896" class="metric">1,281</text>
+  <text x="166" y="896" class="metric-label">images</text>
+  <text x="266" y="896" class="metric">110</text>
+  <text x="318" y="896" class="metric-label">subjects</text>
+  <text x="430" y="896" class="metric">91.73%</text>
+  <text x="522" y="896" class="metric-label">accuracy</text>
+  <text x="620" y="896" class="metric">88.90%</text>
+  <text x="714" y="896" class="metric-label">macro F1</text>
+
+  <rect x="812" y="788" width="724" height="142" class="box-coral"/>
+  <text x="836" y="824" class="node-title">Subtype prototype evidence</text>
+  <text x="836" y="854" class="node-copy">Expert-reviewed non-holdout labels; repeated stratified CV</text>
+  <text x="836" y="896" class="metric">101</text>
+  <text x="890" y="896" class="metric-label">arch rows</text>
+  <text x="1000" y="896" class="metric">0.619</text>
+  <text x="1068" y="896" class="metric-label">macro F1</text>
+  <text x="1180" y="896" class="metric">533</text>
+  <text x="1234" y="896" class="metric-label">whorl rows</text>
+  <text x="1352" y="896" class="metric">0.464</text>
+  <text x="1438" y="896" class="metric-label">macro F1</text>
+
+  <text x="64" y="958" class="node-small">Research prototype: model scores are not identity claims or autonomous forensic conclusions.</text>
+</svg>

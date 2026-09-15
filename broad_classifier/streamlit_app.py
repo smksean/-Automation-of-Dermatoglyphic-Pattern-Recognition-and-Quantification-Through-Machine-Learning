@@ -15,7 +15,11 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from broad_classifier.app_logic import assess_prediction  # noqa: E402
+from broad_classifier.app_logic import (  # noqa: E402
+    PredictionAssessment,
+    assess_prediction,
+    assess_subtype_prediction,
+)
 from broad_classifier.inference import (  # noqa: E402
     CLASS_NAMES,
     DISPLAY_NAMES,
@@ -28,17 +32,32 @@ from broad_classifier.model_assets import (  # noqa: E402
     CHECKPOINT_ASSETS,
     ensure_checkpoints,
 )
+from broad_classifier.subtype_inference import (  # noqa: E402
+    DISPLAY_NAMES as SUBTYPE_DISPLAY_NAMES,
+    predict_subtype,
+    subtype_available,
+)
 
 
 DEFAULT_MODEL_DIRECTORY = ROOT / "models" / "efficientnet_320_cv"
 MODEL_DIRECTORY = Path(
     os.environ.get("BROAD_CLASSIFIER_MODEL_DIR", str(DEFAULT_MODEL_DIRECTORY))
 )
+DEFAULT_SUBTYPE_MODEL_DIRECTORY = (
+    ROOT
+    / "data"
+    / "processed"
+    / "subtype_review_completed_2026-09-06"
+    / "selected_subtype_model_artifacts"
+)
+SUBTYPE_MODEL_DIRECTORY = Path(
+    os.environ.get("SUBTYPE_CLASSIFIER_MODEL_DIR", str(DEFAULT_SUBTYPE_MODEL_DIRECTORY))
+)
 
 PATTERN_DESCRIPTIONS = {
     "arch": (
         "Ridges generally flow from one side to the other with a central rise. "
-        "Plain and tented arch subtypes are not separated by this model."
+        "The conditional subtype prototype then evaluates plain versus tented arch."
     ),
     "left_slant_loop": (
         "A recurving loop assigned to the left-slant category under the dataset's "
@@ -50,7 +69,7 @@ PATTERN_DESCRIPTIONS = {
     ),
     "whorl": (
         "A circular, spiral, or more complex recurving ridge formation. Individual "
-        "whorl subtypes are not separated by this model."
+        "whorl subtypes are evaluated by the conditional subtype prototype."
     ),
 }
 
@@ -168,6 +187,22 @@ st.markdown(
         padding: 0.72rem 0.9rem;
         margin: 0.15rem 0 1.1rem;
     }
+    .subtype-strip {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr 1.4fr;
+        gap: 0;
+        background: var(--surface);
+        border: 1px solid #9fc8bd;
+        border-left: 5px solid var(--green);
+        border-radius: 13px;
+        margin: 0.15rem 0 0.75rem;
+        overflow: hidden;
+    }
+    .subtype-strip > div { padding: 0.78rem 0.9rem; }
+    .subtype-strip > div + div { border-left: 1px solid var(--line); }
+    .subtype-strip strong { display: block; color: var(--ink); font-size: 0.86rem; }
+    .subtype-strip span { display: block; color: var(--muted); font-size: 0.76rem; margin-top: 0.15rem; }
+    .subtype-strip .available { color: var(--green); font-weight: 760; }
     .upload-panel, .result-card, .explanation-card, .empty-card {
         background: var(--surface);
         border: 1px solid var(--line);
@@ -248,6 +283,8 @@ st.markdown(
     .method-note { color: var(--muted); font-size: 0.88rem; }
     @media (max-width: 800px) {
         .workflow, .class-grid { grid-template-columns: 1fr; }
+        .subtype-strip { grid-template-columns: 1fr; }
+        .subtype-strip > div + div { border-left: 0; border-top: 1px solid var(--line); }
         .fold-grid { grid-template-columns: repeat(2, 1fr); }
         .detail-grid { grid-template-columns: 1fr; }
         .hero { padding: 1.55rem 1.25rem; }
@@ -273,6 +310,9 @@ def clear_analysis() -> None:
         "prediction_result",
         "prediction_preview",
         "prediction_seconds",
+        "subtype_prediction_result",
+        "subtype_prediction_error",
+        "subtype_prediction_seconds",
     ):
         st.session_state.pop(key, None)
     st.session_state["uploader_nonce"] = st.session_state.get("uploader_nonce", 0) + 1
@@ -289,6 +329,11 @@ def render_sidebar() -> None:
     else:
         st.sidebar.info("Five verified models download on the first analysis")
 
+    if subtype_available(SUBTYPE_MODEL_DIRECTORY):
+        st.sidebar.success("Arch and whorl subtype prototypes ready")
+    else:
+        st.sidebar.caption("Subtype artifacts are not installed; broad-only mode")
+
     st.sidebar.markdown("### Model profile")
     st.sidebar.markdown(
         "**Architecture:** EfficientNet-B0  \n"
@@ -299,8 +344,9 @@ def render_sidebar() -> None:
     st.sidebar.markdown("---")
     st.sidebar.markdown("### Responsible use")
     st.sidebar.info(
-        "This model classifies ridge-pattern appearance. It does not identify a "
-        "person and does not yet classify arch or whorl subtypes."
+        "This model classifies ridge-pattern appearance. When private subtype "
+        "artifacts are available, it can also report an exploratory arch or whorl "
+        "subtype. It does not identify a person."
     )
     st.sidebar.warning(
         "Do not use the output as an autonomous forensic conclusion."
@@ -323,7 +369,7 @@ def render_workflow(has_upload: bool, has_result: bool) -> None:
             </div>
             <div class="workflow-step {states[1]}">
                 <div class="step-number">2</div>
-                <div class="step-copy"><strong>Analyze</strong><span>Run five trained models</span></div>
+                <div class="step-copy"><strong>Analyze</strong><span>Run broad and eligible subtype models</span></div>
             </div>
             <div class="workflow-step {states[2]}">
                 <div class="step-number">3</div>
@@ -357,6 +403,60 @@ def render_fold_consensus(result: PredictionResult) -> None:
     st.markdown('<div class="fold-grid">' + "".join(cards) + "</div>", unsafe_allow_html=True)
 
 
+def render_subtype_result(
+    subtype_result: dict[str, object],
+    broad_assessment: PredictionAssessment,
+) -> None:
+    """Render the optional second-stage subtype research output."""
+    predicted_subtype = str(subtype_result["predicted_subtype"])
+    display_subtype = str(subtype_result["display_subtype"])
+    confidence = float(subtype_result["confidence"])
+    subtype_assessment = assess_subtype_prediction(
+        predicted_subtype,
+        confidence,
+        broad_prediction_needs_review=broad_assessment.needs_review,
+    )
+
+    st.markdown("#### Conditional subtype prototype")
+    st.markdown(
+        f"""
+        <div class="result-card">
+            <div class="result-label">Predicted subtype</div>
+            <div class="result-name">{display_subtype}</div>
+            <div class="result-score">Conditional model score:
+            <strong>{confidence:.1%}</strong></div>
+            <div class="result-summary">This second-stage result is conditioned on
+            the broad prediction and was trained from the completed expert review.</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    probabilities = dict(subtype_result["probabilities"])
+    with st.expander("Subtype probability distribution"):
+        ordered = sorted(
+            probabilities.items(), key=lambda item: item[1], reverse=True
+        )
+        for label, probability in ordered:
+            display_label = SUBTYPE_DISPLAY_NAMES.get(str(label), str(label))
+            st.progress(
+                float(probability),
+                text=f"{display_label} - {float(probability):.1%}",
+            )
+
+    if subtype_assessment.needs_review:
+        st.warning(
+            "Expert subtype review recommended\n\n- "
+            + "\n- ".join(subtype_assessment.reasons)
+        )
+    else:
+        st.info(
+            "No additional model-level review trigger was activated. This remains "
+            "an exploratory, non-holdout subtype result and is not a final forensic "
+            "classification."
+        )
+
+
 render_sidebar()
 
 result = st.session_state.get("prediction_result")
@@ -367,14 +467,38 @@ st.markdown(
     """
     <div class="hero">
         <span class="eyebrow">Dermatoglyphic research prototype</span>
-        <h1>Broad fingerprint pattern classifier</h1>
-        <p>Analyze one rolled fingerprint impression and review the ensemble's
-        predicted broad ridge pattern, model probability, and internal agreement.</p>
+        <h1>Fingerprint pattern and subtype classifier</h1>
+        <p>Analyze one rolled fingerprint impression for its broad ridge pattern
+        and, when the result is an arch or whorl, an eligible subtype prediction.</p>
         <div class="hero-stats">
-            <span class="hero-stat">4 pattern classes</span>
+            <span class="hero-stat">4 broad patterns</span>
+            <span class="hero-stat">5 arch and whorl subtypes</span>
             <span class="hero-stat">5-model ensemble</span>
             <span class="hero-stat">Subject-disjoint development</span>
             <span class="hero-stat">Transient image processing</span>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+subtype_status = (
+    "Available locally" if subtype_available(SUBTYPE_MODEL_DIRECTORY) else "Broad-only mode"
+)
+st.markdown(
+    f"""
+    <div class="subtype-strip">
+        <div>
+            <strong class="available">Subtype analysis: {subtype_status}</strong>
+            <span>Runs after an eligible broad prediction</span>
+        </div>
+        <div>
+            <strong>Arch subtypes</strong>
+            <span>Plain arch &bull; Tented arch</span>
+        </div>
+        <div>
+            <strong>Whorl subtypes</strong>
+            <span>Plain &bull; Central pocket loop &bull; Double loop</span>
         </div>
     </div>
     """,
@@ -409,6 +533,9 @@ if uploaded_file is not None:
         st.session_state.pop("prediction_result", None)
         st.session_state.pop("prediction_preview", None)
         st.session_state.pop("prediction_seconds", None)
+        st.session_state.pop("subtype_prediction_result", None)
+        st.session_state.pop("subtype_prediction_error", None)
+        st.session_state.pop("subtype_prediction_seconds", None)
         st.session_state["prediction_upload_digest"] = upload_digest
 
 result = st.session_state.get("prediction_result")
@@ -429,14 +556,14 @@ if uploaded_file is None:
         """,
         unsafe_allow_html=True,
     )
-    st.markdown("#### Patterns the model can report")
+    st.markdown("#### Pattern and subtype coverage")
     st.markdown(
         """
         <div class="class-grid">
-            <div class="class-card"><strong>Arch</strong><span>Broad arch family</span></div>
-            <div class="class-card"><strong>Left-slant loop</strong><span>Dataset direction convention</span></div>
-            <div class="class-card"><strong>Right-slant loop</strong><span>Dataset direction convention</span></div>
-            <div class="class-card"><strong>Whorl</strong><span>Broad whorl family</span></div>
+            <div class="class-card"><strong>Arch</strong><span>Subtypes: plain, tented</span></div>
+            <div class="class-card"><strong>Left-slant loop</strong><span>Broad pattern only</span></div>
+            <div class="class-card"><strong>Right-slant loop</strong><span>Broad pattern only</span></div>
+            <div class="class-card"><strong>Whorl</strong><span>Subtypes: plain, central pocket loop, double loop</span></div>
         </div>
         """,
         unsafe_allow_html=True,
@@ -458,7 +585,11 @@ else:
         preview_column, action_column = st.columns([1, 1.15], gap="large")
         with preview_column:
             st.markdown("#### Uploaded impression")
-            st.image(decoded_preview, channels="GRAY", width="stretch")
+            st.image(
+                decoded_preview,
+                channels="GRAY",
+                use_container_width=True,
+            )
         with action_column:
             st.markdown("#### Ready for analysis")
             st.markdown(
@@ -494,6 +625,40 @@ else:
                 st.session_state["prediction_result"] = result
                 st.session_state["prediction_preview"] = preprocessed
                 st.session_state["prediction_seconds"] = time.perf_counter() - start
+                st.session_state["subtype_prediction_result"] = None
+                st.session_state["subtype_prediction_error"] = None
+                st.session_state.pop("subtype_prediction_seconds", None)
+
+                if result.predicted_class in {"arch", "whorl"}:
+                    if subtype_available(
+                        SUBTYPE_MODEL_DIRECTORY,
+                        broad_class=result.predicted_class,
+                    ):
+                        subtype_start = time.perf_counter()
+                        try:
+                            with st.spinner(
+                                "Running the conditional subtype prototype..."
+                            ):
+                                subtype_result = predict_subtype(
+                                    result.predicted_class,
+                                    preprocessed,
+                                    artifact_dir=SUBTYPE_MODEL_DIRECTORY,
+                                )
+                            st.session_state["subtype_prediction_result"] = (
+                                subtype_result
+                            )
+                            st.session_state["subtype_prediction_seconds"] = (
+                                time.perf_counter() - subtype_start
+                            )
+                        except Exception as exc:
+                            # The optional research model must not suppress a valid
+                            # broad-pattern result.
+                            st.session_state["subtype_prediction_error"] = str(exc)
+                    else:
+                        st.session_state["subtype_prediction_error"] = (
+                            "The private subtype artifact is not installed in this "
+                            "environment."
+                        )
                 has_result = True
             except InputImageError as exc:
                 st.error(str(exc))
@@ -544,7 +709,7 @@ if isinstance(result, PredictionResult) and preprocessed is not None:
                 preprocessed,
                 clamp=True,
                 channels="GRAY",
-                width="stretch",
+                use_container_width=True,
                 caption="Cropped, CLAHE-enhanced, 320 × 320",
             )
             inference_seconds = st.session_state.get("prediction_seconds")
@@ -556,6 +721,24 @@ if isinstance(result, PredictionResult) and preprocessed is not None:
             "calibrated statement of correctness. Consequential or uncertain cases "
             "require qualified human review."
         )
+
+        if result.predicted_class in {"arch", "whorl"}:
+            subtype_result = st.session_state.get("subtype_prediction_result")
+            subtype_error = st.session_state.get("subtype_prediction_error")
+            if isinstance(subtype_result, dict):
+                render_subtype_result(subtype_result, assessment)
+                subtype_seconds = st.session_state.get("subtype_prediction_seconds")
+                if subtype_seconds is not None:
+                    st.caption(
+                        "Conditional subtype inference completed in "
+                        f"{float(subtype_seconds):.2f} seconds."
+                    )
+            elif subtype_error:
+                st.info(
+                    "Subtype prediction is unavailable for this run. The broad "
+                    "ensemble result above is unaffected."
+                )
+                st.caption(str(subtype_error))
 
     with probabilities_tab:
         st.subheader("Probability distribution")

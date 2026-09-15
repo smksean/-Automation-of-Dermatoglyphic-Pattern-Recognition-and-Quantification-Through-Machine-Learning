@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.vercel/
+.env*
+!.env.example
+npm-debug.log*
+assets/source/web-app-*.png
+
+.vercel

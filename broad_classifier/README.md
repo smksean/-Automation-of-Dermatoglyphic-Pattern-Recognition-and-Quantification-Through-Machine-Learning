@@ -27,6 +27,20 @@ annotation application:
 
 Open `http://localhost:8502`.
 
+When the private selected subtype artifacts are present, an arch or whorl broad
+prediction automatically triggers the corresponding exploratory subtype model:
+
+```text
+data/processed/subtype_review_completed_2026-09-06/
+  selected_subtype_model_artifacts/
+    arch_subtype_classifier.pkl
+    whorl_subtype_classifier.pkl
+```
+
+Set `SUBTYPE_CLASSIFIER_MODEL_DIR` to use another local artifact directory. The
+app remains broad-only when the requested private artifact is absent. Loop
+predictions do not trigger subtype inference.
+
 If a valid checkpoint is missing, the application downloads it from the frozen
 GitHub source commit on the first analysis and verifies its exact byte size and
 SHA-256 digest before loading it. Set `BROAD_CLASSIFIER_MODEL_DIR` to an
@@ -71,3 +85,7 @@ them in the ephemeral model cache, and verifies each file against the frozen
 manifest. Later analyses in the same server process reuse the verified files
 and in-memory ensemble. Never place biometric test images or Streamlit secrets
 in Git.
+
+The subtype output is an expert-reviewed, non-holdout research prototype. Its
+validation status is displayed separately from the subject-grouped broad
+classifier, and minority whorl predictions are flagged for expert review.

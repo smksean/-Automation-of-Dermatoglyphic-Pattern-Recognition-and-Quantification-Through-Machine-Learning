@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: dermatoglyphic-inference
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./inference_service/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: API_TOKEN
+        sync: false
+      - key: SUBTYPE_CLASSIFIER_MODEL_DIR
+        value: /etc/secrets

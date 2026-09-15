@@ -1,0 +1,7 @@
+**
+!broad_classifier/
+!broad_classifier/*.py
+!inference_service/
+!inference_service/**
+inference_service/.env
+inference_service/__pycache__/
