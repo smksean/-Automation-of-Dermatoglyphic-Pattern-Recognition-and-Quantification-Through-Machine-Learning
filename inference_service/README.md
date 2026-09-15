@@ -43,10 +43,12 @@ five broad models remained resident. This is close to Render's 512 MB free-tier
 limit, so the free deployment is suitable for research demonstration rather
 than availability-critical production.
 
-On Render, add the two subtype pickle files as runtime secret files with their
-original filenames. Docker receives them under `/etc/secrets`; they are never
-included in the source repository or built image. Set `API_TOKEN` during the
-initial Blueprint setup and use the same value in Vercel.
+On Render, the deployment automation stores each private classifier as an
+ASCII base64 secret file named `arch_subtype_classifier.b64` and
+`whorl_subtype_classifier.b64`. At runtime, the service decodes both into
+ephemeral storage and verifies their fixed SHA-256 digests before loading them.
+Neither classifier is included in the source repository or built image. Set
+`API_TOKEN` on Render and use the same value in Vercel.
 
 Configure the Vercel project with the backend URL and the same token:
 

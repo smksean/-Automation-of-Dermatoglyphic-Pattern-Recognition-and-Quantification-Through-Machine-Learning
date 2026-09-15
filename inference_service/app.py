@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import base64
 import hmac
 import gc
+from hashlib import sha256
 import os
 import threading
 import time
@@ -43,6 +45,11 @@ DEFAULT_LOCAL_SUBTYPES = (
 )
 PACKAGED_SUBTYPES = ROOT / "inference_service" / "artifacts"
 RENDER_SECRET_SUBTYPES = Path("/etc/secrets")
+MATERIALIZED_SUBTYPES = Path("/tmp/dermatoglyphic-subtypes")
+SUBTYPE_ARTIFACT_SHA256 = {
+    "arch": "3cd758560fe43364a1732a00fe9fe02a31153e8a0c80771babcbee2710b6d817",
+    "whorl": "56397dbb25309f9edfa40fbce010336d2a1a244aaa6fae62358893c35114dc74",
+}
 
 
 def _model_directory() -> Path:
@@ -56,16 +63,48 @@ def _model_directory() -> Path:
 
 def _subtype_directory() -> Path:
     configured = os.environ.get("SUBTYPE_CLASSIFIER_MODEL_DIR")
-    if configured:
-        return Path(configured)
-    if DEFAULT_LOCAL_SUBTYPES.is_dir():
-        return DEFAULT_LOCAL_SUBTYPES
-    if all(
-        (RENDER_SECRET_SUBTYPES / f"{task}_subtype_classifier.pkl").is_file()
-        for task in ("arch", "whorl")
-    ):
-        return RENDER_SECRET_SUBTYPES
+    candidates = [Path(configured)] if configured else []
+    candidates.extend(
+        [DEFAULT_LOCAL_SUBTYPES, RENDER_SECRET_SUBTYPES, PACKAGED_SUBTYPES]
+    )
+    for candidate in candidates:
+        if all(
+            (candidate / f"{task}_subtype_classifier.pkl").is_file()
+            for task in SUBTYPE_ARTIFACT_SHA256
+        ):
+            return candidate
+        materialized = _materialize_subtype_secrets(candidate, MATERIALIZED_SUBTYPES)
+        if materialized is not None:
+            return materialized
     return PACKAGED_SUBTYPES
+
+
+def _materialize_subtype_secrets(
+    source_directory: Path,
+    target_directory: Path,
+) -> Optional[Path]:
+    encoded_paths = {
+        task: source_directory / f"{task}_subtype_classifier.b64"
+        for task in SUBTYPE_ARTIFACT_SHA256
+    }
+    if not all(path.is_file() for path in encoded_paths.values()):
+        return None
+
+    target_directory.mkdir(parents=True, exist_ok=True)
+    for task, encoded_path in encoded_paths.items():
+        try:
+            artifact_bytes = base64.b64decode(
+                encoded_path.read_text(encoding="ascii"),
+                validate=True,
+            )
+        except (OSError, ValueError) as exc:
+            raise RuntimeError(f"Invalid encoded {task} subtype artifact.") from exc
+        if sha256(artifact_bytes).hexdigest() != SUBTYPE_ARTIFACT_SHA256[task]:
+            raise RuntimeError(f"Integrity check failed for {task} subtype artifact.")
+        artifact_path = target_directory / f"{task}_subtype_classifier.pkl"
+        artifact_path.write_bytes(artifact_bytes)
+        artifact_path.chmod(0o600)
+    return target_directory
 
 
 class SequentialBroadEnsemble:
