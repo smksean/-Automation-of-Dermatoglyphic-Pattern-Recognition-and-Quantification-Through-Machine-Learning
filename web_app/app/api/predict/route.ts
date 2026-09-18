@@ -4,7 +4,7 @@ const MAX_UPLOAD_BYTES = 4 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["image/png", "image/jpeg", "image/tiff"]);
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+export const maxDuration = 120;
 
 export async function POST(request: Request) {
   const inferenceUrl = process.env.INFERENCE_API_URL?.replace(/\/$/, "");
