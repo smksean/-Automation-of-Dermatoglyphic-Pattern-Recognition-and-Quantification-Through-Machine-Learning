@@ -203,7 +203,7 @@ export function AnalysisWorkspace() {
                 <li><span>1</span> Four-class broad prediction</li>
                 <li><span>2</span> Five-fold probability and agreement review</li>
                 <li><span>3</span> Conditional subtype prediction</li>
-                <li><span>4</span> Image quality and ridge-flow feature evidence</li>
+                <li><span>4</span> Image-derived quantitative feature profile</li>
               </ol>
             </div>
           ) : (
@@ -220,9 +220,9 @@ export function AnalysisWorkspace() {
               <div className="single-quantification">
                 <Calculator size={22} aria-hidden="true" />
                 <div>
-                  <span>Single-finger intensity contribution</span>
+                  <span>Model-derived pattern quantification</span>
                   <strong>{patternIntensityContributions[result.predictedClass]} point{patternIntensityContributions[result.predictedClass] === 1 ? "" : "s"}</strong>
-                  <small>Complete PII requires predictions from all ten fingers.</small>
+                  <small>Arch = 0, loop = 1, whorl = 2. Complete PII requires all ten fingers.</small>
                 </div>
               </div>
               <ProbabilityList values={result.probabilities} />

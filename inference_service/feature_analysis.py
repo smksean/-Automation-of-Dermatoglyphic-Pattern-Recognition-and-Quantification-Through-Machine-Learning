@@ -290,7 +290,7 @@ def _unsupported_endpoint_payloads() -> dict[str, Any]:
             ),
         },
         "scope": (
-            "Descriptive image-quality and ridge-flow analysis; not identity matching, "
+            "Image-derived quantitative feature layer for descriptive quality and ridge-flow analysis; not identity matching, "
             "forensic minutiae certification, or validated TFRC."
         ),
     }

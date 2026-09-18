@@ -108,7 +108,8 @@ checkpoint once across the set.
 
 Uploaded-image feature analysis reports foreground coverage, ridge contrast,
 sharpness, local orientation coherence, and a ridge-density proxy. These are
-descriptive image-derived measurements. Examiner-marked EFS minutiae remain the
+the image-derived quantitative feature layer. The composite screening value is
+a transparent weighted heuristic, not a calibrated NFIQ score. Examiner-marked EFS minutiae remain the
 reference quantification source: automated ridge-ending/bifurcation counts,
 core/delta locations, and TFRC are visibly marked as validation-required or not
 reported instead of being inferred from an unqualified skeleton heuristic.

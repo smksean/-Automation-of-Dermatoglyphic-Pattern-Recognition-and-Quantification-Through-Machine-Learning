@@ -135,9 +135,15 @@ export function QuantificationSection() {
       <div className="section-heading">
         <div>
           <p className="eyebrow">04 / Quantification layer</p>
-          <h2 id="quant-title">Measured outputs stay tied to available examiner annotations</h2>
+          <h2 id="quant-title">Quantitative outputs remain separated by source and validation status</h2>
         </div>
-        <p>Pattern intensity and minutiae summaries are reported as descriptive cohort measures from the restored SD302 annotations.</p>
+        <p>The study distinguishes model-derived pattern indices, image-derived descriptors, and examiner-derived EFS reference measurements.</p>
+      </div>
+
+      <div className="quant-evidence-streams">
+        <article><BrainCircuit size={20} /><div><span>Model-derived</span><strong>Pattern quantification</strong><p>Single-finger 0/1/2 contribution and ten-finger PII calculated from predicted broad classes.</p></div></article>
+        <article><Calculator size={20} /><div><span>Image-derived</span><strong>Quantitative feature profile</strong><p>Coverage, contrast, sharpness, orientation coherence, ridge-density proxy, and source dimensions.</p></div></article>
+        <article><Database size={20} /><div><span>Examiner-derived</span><strong>Reference quantification</strong><p>SD302g EFS field 9.331 supplies cohort minutiae, ridge-ending, and bifurcation summaries.</p></div></article>
       </div>
 
       <div className="quant-layout">
