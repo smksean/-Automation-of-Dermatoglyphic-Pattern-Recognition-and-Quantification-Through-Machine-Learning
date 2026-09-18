@@ -95,3 +95,20 @@ They are not identity conclusions, clinical diagnoses, or evidence that an
 uploaded image belongs to a demographic or disease group. TFRC should be
 described only as a candidate endpoint outside the reported primary
 quantification layer for this phase.
+
+## Web Implementation Update
+
+Date: 2026-09-18
+
+The web application now keeps single-fingerprint analysis and ten-finger PII as
+separate tasks. One fingerprint receives a 0, 1, or 2 intensity contribution;
+a complete PII is calculated only from ten labeled positions. The ten files are
+uploaded individually and processed by one batch job that loads each broad-model
+checkpoint once across the set.
+
+Uploaded-image feature analysis reports foreground coverage, ridge contrast,
+sharpness, local orientation coherence, and a ridge-density proxy. These are
+descriptive image-derived measurements. Examiner-marked EFS minutiae remain the
+reference quantification source: automated ridge-ending/bifurcation counts,
+core/delta locations, and TFRC are visibly marked as validation-required or not
+reported instead of being inferred from an unqualified skeleton heuristic.

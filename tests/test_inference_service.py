@@ -10,10 +10,13 @@ import unittest
 from unittest.mock import patch
 
 import numpy as np
+import torch
 from fastapi.testclient import TestClient
 from PIL import Image
 
 from inference_service.app import (
+    FINGER_IDS,
+    SequentialBroadEnsemble,
     SUBTYPE_ARTIFACT_SHA256,
     _materialize_subtype_secrets,
     app,
@@ -99,6 +102,76 @@ class InferenceServiceTests(unittest.TestCase):
         self.assertEqual(completed.json()["status"], "complete")
         self.assertEqual(completed.json()["result"], expected)
         self.assertEqual(completed.headers["cache-control"], "no-store")
+
+    def test_batch_job_collects_ten_images_and_returns_one_result(self) -> None:
+        expected = {
+            "fingerResults": [],
+            "counts": {"arch": 1, "loop": 7, "whorl": 2},
+            "pii": 11,
+            "reviewCount": 0,
+            "featureReviewCount": 0,
+            "processingSeconds": 12.5,
+            "scope": "test",
+        }
+        created = self.client.post("/batch-jobs")
+        self.assertEqual(created.status_code, 201)
+        job_id = created.json()["jobId"]
+
+        for finger_id in FINGER_IDS:
+            uploaded = self.client.post(
+                f"/batch-jobs/{job_id}/images/{finger_id}",
+                files={"image": (f"{finger_id}.png", png_bytes(), "image/png")},
+            )
+            self.assertEqual(uploaded.status_code, 200)
+        self.assertEqual(uploaded.json()["uploadedCount"], 10)
+
+        with patch("inference_service.app.runtime.predict_batch", return_value=expected) as predict_batch:
+            started = self.client.post(f"/batch-jobs/{job_id}/start")
+        self.assertEqual(started.status_code, 202)
+        predict_batch.assert_called_once()
+
+        completed = self.client.get(f"/jobs/{job_id}")
+        self.assertEqual(completed.status_code, 200)
+        self.assertEqual(completed.json()["status"], "complete")
+        self.assertEqual(completed.json()["result"]["pii"], 11)
+        self.assertNotIn("images", completed.json())
+
+    def test_batch_job_cannot_start_with_missing_fingers(self) -> None:
+        created = self.client.post("/batch-jobs")
+        job_id = created.json()["jobId"]
+        response = self.client.post(f"/batch-jobs/{job_id}/start")
+        self.assertEqual(response.status_code, 400)
+
+    def test_batch_ensemble_loads_each_checkpoint_once(self) -> None:
+        class FakeModel:
+            def __init__(self) -> None:
+                self.call_count = 0
+
+            def eval(self):
+                return self
+
+            def load_state_dict(self, _state, strict=True):
+                self.strict = strict
+
+            def __call__(self, batch):
+                self.call_count += 1
+                logits = torch.zeros((batch.shape[0], 4), dtype=torch.float32)
+                logits[:, 0] = 4.0
+                return logits
+
+        model = FakeModel()
+        ensemble = SequentialBroadEnsemble(Path("unused"))
+        images = [np.full((320, 320), 127, dtype=np.uint8) for _ in range(10)]
+        with patch("inference_service.app.build_model", return_value=model), patch(
+            "inference_service.app.torch.load",
+            return_value={},
+        ) as checkpoint_load:
+            results, _ = ensemble.predict_preprocessed_batch(images)
+
+        self.assertEqual(len(results), 10)
+        self.assertTrue(all(result.predicted_class == "arch" for result in results))
+        self.assertEqual(checkpoint_load.call_count, 5)
+        self.assertEqual(model.call_count, 25)
 
     def test_predict_rejects_unsupported_content_type(self) -> None:
         response = self.client.post(

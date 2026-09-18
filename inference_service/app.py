@@ -13,7 +13,7 @@ import os
 import threading
 import time
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Callable, Optional, Sequence
 
 import numpy as np
 import torch
@@ -42,6 +42,7 @@ from broad_classifier.inference import (
 )
 from broad_classifier.model_assets import ensure_checkpoints
 from broad_classifier.subtype_inference import predict_subtype, subtype_available
+from inference_service.feature_analysis import analyze_fingerprint_features
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -64,6 +65,20 @@ SUBTYPE_ARTIFACT_SHA256 = {
 }
 JOB_TTL_SECONDS = 10 * 60
 MAX_ACTIVE_JOBS = 2
+MAX_BATCH_UPLOAD_BYTES = 20 * 1024 * 1024
+MODEL_BATCH_SIZE = max(1, int(os.environ.get("MODEL_BATCH_SIZE", "2")))
+FINGER_IDS = (
+    "right-thumb",
+    "right-index",
+    "right-middle",
+    "right-ring",
+    "right-little",
+    "left-thumb",
+    "left-index",
+    "left-middle",
+    "left-ring",
+    "left-little",
+)
 logger = logging.getLogger(__name__)
 
 
@@ -133,42 +148,68 @@ class SequentialBroadEnsemble:
     def predict_bytes(self, image_bytes: bytes) -> tuple[PredictionResult, np.ndarray]:
         decoded = decode_image(image_bytes)
         preprocessed = preprocess_image(decoded)
-        tensor = image_to_tensor(preprocessed)
+        return self.predict_preprocessed_batch((preprocessed,))[0][0], preprocessed
+
+    def predict_preprocessed_batch(
+        self,
+        images: Sequence[np.ndarray],
+        progress_callback: Callable[[int, int], None] | None = None,
+    ) -> tuple[list[PredictionResult], float]:
+        """Run every checkpoint once across a memory-conscious image batch."""
+        if not images:
+            raise ValueError("At least one preprocessed image is required.")
+        started = time.perf_counter()
+        tensor = torch.cat([image_to_tensor(image) for image in images], dim=0)
         probability_rows: list[np.ndarray] = []
         model = build_model()
         model.eval()
 
         with torch.inference_mode():
-            for checkpoint_path in self.checkpoint_paths:
+            for checkpoint_index, checkpoint_path in enumerate(self.checkpoint_paths, start=1):
                 state_dictionary = torch.load(
                     checkpoint_path,
                     map_location="cpu",
                     weights_only=True,
                 )
                 model.load_state_dict(state_dictionary, strict=True)
-                probabilities = torch.softmax(model(tensor), dim=1)[0]
-                probability_rows.append(probabilities.cpu().numpy())
+                checkpoint_probabilities: list[np.ndarray] = []
+                for start in range(0, len(images), MODEL_BATCH_SIZE):
+                    batch = tensor[start : start + MODEL_BATCH_SIZE]
+                    probabilities = torch.softmax(model(batch), dim=1)
+                    checkpoint_probabilities.append(probabilities.cpu().numpy())
+                probability_rows.append(np.concatenate(checkpoint_probabilities, axis=0))
                 del state_dictionary
+                if progress_callback is not None:
+                    progress_callback(checkpoint_index, len(self.checkpoint_paths))
 
-        per_fold = np.stack(probability_rows)
-        mean_probabilities = per_fold.mean(axis=0)
-        predicted_index = int(mean_probabilities.argmax())
-        fold_indices = per_fold.argmax(axis=1)
-        sorted_probabilities = np.sort(mean_probabilities)
-        result = PredictionResult(
-            predicted_class=CLASS_NAMES[predicted_index],
-            predicted_probability=float(mean_probabilities[predicted_index]),
-            class_probabilities={
-                name: float(mean_probabilities[index])
-                for index, name in enumerate(CLASS_NAMES)
-            },
-            fold_predictions=tuple(CLASS_NAMES[int(index)] for index in fold_indices),
-            agreement=float(np.mean(fold_indices == predicted_index)),
-            top_two_margin=float(sorted_probabilities[-1] - sorted_probabilities[-2]),
-        )
+        per_fold = np.stack(probability_rows, axis=0)
+        results: list[PredictionResult] = []
+        for image_index in range(len(images)):
+            image_probabilities = per_fold[:, image_index, :]
+            mean_probabilities = image_probabilities.mean(axis=0)
+            predicted_index = int(mean_probabilities.argmax())
+            fold_indices = image_probabilities.argmax(axis=1)
+            sorted_probabilities = np.sort(mean_probabilities)
+            results.append(
+                PredictionResult(
+                    predicted_class=CLASS_NAMES[predicted_index],
+                    predicted_probability=float(mean_probabilities[predicted_index]),
+                    class_probabilities={
+                        name: float(mean_probabilities[index])
+                        for index, name in enumerate(CLASS_NAMES)
+                    },
+                    fold_predictions=tuple(
+                        CLASS_NAMES[int(index)] for index in fold_indices
+                    ),
+                    agreement=float(np.mean(fold_indices == predicted_index)),
+                    top_two_margin=float(
+                        sorted_probabilities[-1] - sorted_probabilities[-2]
+                    ),
+                )
+            )
         del model, tensor
         gc.collect()
-        return result, preprocessed
+        return results, time.perf_counter() - started
 
 
 class ModelRuntime:
@@ -197,8 +238,14 @@ class ModelRuntime:
 
     def _predict_locked(self, image_bytes: bytes) -> dict[str, Any]:
         started = time.perf_counter()
-        result, preprocessed = self.ensemble().predict_bytes(image_bytes)
+        decoded = decode_image(image_bytes)
+        preprocessed = preprocess_image(decoded)
+        result = self.ensemble().predict_preprocessed_batch((preprocessed,))[0][0]
         assessment = assess_prediction(result)
+        feature_analysis = analyze_fingerprint_features(
+            decoded,
+            include_overlay=True,
+        )
 
         subtype_payload: dict[str, Any] | None = None
         subtype_directory = _subtype_directory()
@@ -235,7 +282,88 @@ class ModelRuntime:
             "needsReview": assessment.needs_review,
             "reviewReasons": list(assessment.reasons),
             "subtype": subtype_payload,
+            "featureAnalysis": feature_analysis,
             "processingSeconds": time.perf_counter() - started,
+        }
+
+    def predict_batch(
+        self,
+        image_items: Sequence[tuple[str, bytes]],
+        progress_callback: Callable[[int, int], None] | None = None,
+    ) -> dict[str, Any]:
+        with self._prediction_lock:
+            return self._predict_batch_locked(image_items, progress_callback)
+
+    def _predict_batch_locked(
+        self,
+        image_items: Sequence[tuple[str, bytes]],
+        progress_callback: Callable[[int, int], None] | None,
+    ) -> dict[str, Any]:
+        started = time.perf_counter()
+        preprocessed_images: list[np.ndarray] = []
+        feature_analyses: list[dict[str, Any]] = []
+        for _, image_bytes in image_items:
+            decoded = decode_image(image_bytes)
+            preprocessed_images.append(preprocess_image(decoded))
+            feature_analyses.append(
+                analyze_fingerprint_features(decoded, include_overlay=False)
+            )
+
+        broad_results, _ = self.ensemble().predict_preprocessed_batch(
+            preprocessed_images,
+            progress_callback=progress_callback,
+        )
+        counts = {"arch": 0, "loop": 0, "whorl": 0}
+        pii = 0
+        finger_results: list[dict[str, Any]] = []
+        review_count = 0
+        feature_review_count = 0
+        for (finger_id, _), result, features in zip(
+            image_items,
+            broad_results,
+            feature_analyses,
+        ):
+            assessment = assess_prediction(result)
+            family = (
+                "loop"
+                if result.predicted_class in {"left_slant_loop", "right_slant_loop"}
+                else result.predicted_class
+            )
+            contribution = {"arch": 0, "loop": 1, "whorl": 2}[family]
+            counts[family] += 1
+            pii += contribution
+            review_count += int(assessment.needs_review)
+            feature_review_count += int(features["quality"]["needsReview"])
+            finger_results.append(
+                {
+                    "fingerId": finger_id,
+                    "prediction": {
+                        "predictedClass": result.predicted_class,
+                        "score": result.predicted_probability,
+                        "probabilities": result.class_probabilities,
+                        "foldPredictions": list(result.fold_predictions),
+                        "agreement": result.agreement,
+                        "topTwoMargin": result.top_two_margin,
+                        "needsReview": assessment.needs_review,
+                        "reviewReasons": list(assessment.reasons),
+                        "subtype": None,
+                        "featureAnalysis": features,
+                        "processingSeconds": 0.0,
+                    },
+                }
+            )
+
+        return {
+            "fingerResults": finger_results,
+            "counts": counts,
+            "pii": pii,
+            "reviewCount": review_count,
+            "featureReviewCount": feature_review_count,
+            "processingSeconds": time.perf_counter() - started,
+            "scope": (
+                "Broad-pattern batch inference and model-derived PII. Conditional subtype "
+                "inference is intentionally omitted from the ten-finger batch."
+            ),
         }
 
 
@@ -278,6 +406,11 @@ def _read_validated_upload(image: UploadFile) -> bytes:
             detail="Unsupported image format. Use PNG, JPEG, or TIFF.",
         )
     image_bytes = image.file.read(MAX_UPLOAD_BYTES + 1)
+    if not image_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The uploaded image is empty.",
+        )
     if len(image_bytes) > MAX_UPLOAD_BYTES:
         raise HTTPException(
             status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
@@ -290,7 +423,7 @@ def _prune_finished_jobs(now: float) -> None:
     expired = [
         job_id
         for job_id, job in jobs.items()
-        if job["status"] in {"complete", "failed"}
+        if job["status"] in {"collecting", "complete", "failed"}
         and now - job["updatedAt"] > JOB_TTL_SECONDS
     ]
     for job_id in expired:
@@ -299,7 +432,12 @@ def _prune_finished_jobs(now: float) -> None:
 
 def _run_prediction_job(job_id: str, image_bytes: bytes) -> None:
     with jobs_lock:
-        jobs[job_id].update(status="running", updatedAt=time.monotonic())
+        jobs[job_id].update(
+            status="running",
+            progress=0.1,
+            message="Preparing fingerprint analysis",
+            updatedAt=time.monotonic(),
+        )
     try:
         result = runtime.predict(image_bytes)
     except Exception:
@@ -308,6 +446,7 @@ def _run_prediction_job(job_id: str, image_bytes: bytes) -> None:
             jobs[job_id].update(
                 status="failed",
                 error="The inference service could not complete this analysis.",
+                progress=1.0,
                 updatedAt=time.monotonic(),
             )
     else:
@@ -315,6 +454,50 @@ def _run_prediction_job(job_id: str, image_bytes: bytes) -> None:
             jobs[job_id].update(
                 status="complete",
                 result=result,
+                progress=1.0,
+                message="Analysis complete",
+                updatedAt=time.monotonic(),
+            )
+
+
+def _run_batch_prediction_job(job_id: str) -> None:
+    with jobs_lock:
+        job = jobs[job_id]
+        stored_images = job.pop("images")
+        image_items = [(finger_id, stored_images[finger_id]) for finger_id in FINGER_IDS]
+        job.update(
+            status="running",
+            progress=0.08,
+            message="Preprocessing ten fingerprints",
+            updatedAt=time.monotonic(),
+        )
+
+    def update_progress(checkpoint: int, total: int) -> None:
+        with jobs_lock:
+            jobs[job_id].update(
+                progress=round(0.15 + 0.8 * checkpoint / total, 3),
+                message=f"Running ensemble checkpoint {checkpoint} of {total}",
+                updatedAt=time.monotonic(),
+            )
+
+    try:
+        result = runtime.predict_batch(image_items, update_progress)
+    except Exception:
+        logger.exception("Background batch inference job %s failed", job_id)
+        with jobs_lock:
+            jobs[job_id].update(
+                status="failed",
+                error="The inference service could not complete the ten-finger analysis.",
+                progress=1.0,
+                updatedAt=time.monotonic(),
+            )
+    else:
+        with jobs_lock:
+            jobs[job_id].update(
+                status="complete",
+                result=result,
+                progress=1.0,
+                message="Ten-finger analysis complete",
                 updatedAt=time.monotonic(),
             )
 
@@ -357,7 +540,8 @@ def create_job(
     with jobs_lock:
         _prune_finished_jobs(now)
         active_jobs = sum(
-            job["status"] in {"queued", "running"} for job in jobs.values()
+            job["status"] in {"collecting", "queued", "running"}
+            for job in jobs.values()
         )
         if active_jobs >= MAX_ACTIVE_JOBS:
             raise HTTPException(
@@ -365,8 +549,139 @@ def create_job(
                 detail="The research inference service is busy. Try again shortly.",
             )
         job_id = secrets.token_urlsafe(18)
-        jobs[job_id] = {"status": "queued", "updatedAt": now}
+        jobs[job_id] = {
+            "kind": "single",
+            "status": "queued",
+            "progress": 0.0,
+            "message": "Queued for analysis",
+            "updatedAt": now,
+        }
     background_tasks.add_task(_run_prediction_job, job_id, image_bytes)
+    return JSONResponse(
+        {"jobId": job_id, "status": "queued"},
+        status_code=status.HTTP_202_ACCEPTED,
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.post(
+    "/batch-jobs",
+    dependencies=[Depends(require_api_token)],
+    status_code=201,
+)
+def create_batch_job() -> JSONResponse:
+    now = time.monotonic()
+    with jobs_lock:
+        _prune_finished_jobs(now)
+        active_jobs = sum(
+            job["status"] in {"collecting", "queued", "running"}
+            for job in jobs.values()
+        )
+        if active_jobs >= MAX_ACTIVE_JOBS:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="The research inference service is busy. Try again shortly.",
+            )
+        job_id = secrets.token_urlsafe(18)
+        jobs[job_id] = {
+            "kind": "batch",
+            "status": "collecting",
+            "uploadedCount": 0,
+            "progress": 0.0,
+            "message": "Waiting for ten labeled fingerprints",
+            "images": {},
+            "updatedAt": now,
+        }
+    return JSONResponse(
+        {"jobId": job_id, "status": "collecting", "uploadedCount": 0},
+        status_code=status.HTTP_201_CREATED,
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.post(
+    "/batch-jobs/{job_id}/images/{finger_id}",
+    dependencies=[Depends(require_api_token)],
+)
+def upload_batch_image(
+    job_id: str,
+    finger_id: str,
+    image: UploadFile = File(...),
+) -> JSONResponse:
+    if finger_id not in FINGER_IDS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unknown finger position.",
+        )
+    image_bytes = _read_validated_upload(image)
+    with jobs_lock:
+        job = jobs.get(job_id)
+        if job is None or job.get("kind") != "batch":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ten-finger analysis job not found.",
+            )
+        if job["status"] != "collecting":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This ten-finger job is no longer accepting images.",
+            )
+        existing_size = len(job["images"].get(finger_id, b""))
+        proposed_total = (
+            sum(len(payload) for payload in job["images"].values())
+            - existing_size
+            + len(image_bytes)
+        )
+        if proposed_total > MAX_BATCH_UPLOAD_BYTES:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail="The ten-finger batch exceeds the 20 MB in-memory safety limit.",
+            )
+        job["images"][finger_id] = image_bytes
+        uploaded_count = len(job["images"])
+        job.update(
+            uploadedCount=uploaded_count,
+            progress=round(uploaded_count / (len(FINGER_IDS) * 10), 3),
+            message=f"Uploaded {uploaded_count} of {len(FINGER_IDS)} fingerprints",
+            updatedAt=time.monotonic(),
+        )
+    return JSONResponse(
+        {"jobId": job_id, "status": "collecting", "uploadedCount": uploaded_count},
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@app.post(
+    "/batch-jobs/{job_id}/start",
+    dependencies=[Depends(require_api_token)],
+    status_code=202,
+)
+def start_batch_job(job_id: str, background_tasks: BackgroundTasks) -> JSONResponse:
+    with jobs_lock:
+        job = jobs.get(job_id)
+        if job is None or job.get("kind") != "batch":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Ten-finger analysis job not found.",
+            )
+        if job["status"] != "collecting":
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This ten-finger job has already started.",
+            )
+        missing = [finger_id for finger_id in FINGER_IDS if finger_id not in job["images"]]
+        if missing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Upload all ten finger positions before starting analysis.",
+            )
+        job.update(
+            status="queued",
+            progress=0.1,
+            message="Ten-finger batch queued",
+            updatedAt=time.monotonic(),
+        )
+    background_tasks.add_task(_run_batch_prediction_job, job_id)
     return JSONResponse(
         {"jobId": job_id, "status": "queued"},
         status_code=status.HTTP_202_ACCEPTED,
@@ -384,5 +699,9 @@ def get_job(job_id: str) -> JSONResponse:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Analysis job not found.",
             )
-        payload = {key: value for key, value in job.items() if key != "updatedAt"}
+        payload = {
+            key: value
+            for key, value in job.items()
+            if key not in {"updatedAt", "images"}
+        }
     return JSONResponse(payload, headers={"Cache-Control": "no-store"})

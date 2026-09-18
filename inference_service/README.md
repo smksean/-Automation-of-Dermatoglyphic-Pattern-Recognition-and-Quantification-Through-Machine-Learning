@@ -62,6 +62,26 @@ records expire after ten minutes, and uploaded image bytes are released after
 inference without being written to disk. The synchronous `POST /predict`
 endpoint remains available for local verification.
 
+Ten-finger analysis uses an in-memory collection job so no single Vercel request
+contains all ten biometric files:
+
+1. `POST /batch-jobs` creates the collection.
+2. `POST /batch-jobs/{job_id}/images/{finger_id}` uploads each labeled image.
+3. `POST /batch-jobs/{job_id}/start` starts one optimized inference task.
+4. `GET /jobs/{job_id}` reports checkpoint progress and the final PII.
+
+The batch is capped at 20 MB in memory. The runtime preprocesses all ten images,
+loads each of the five broad-model checkpoints once, and uses micro-batches of
+two images by default (`MODEL_BATCH_SIZE`). Conditional subtype inference is
+omitted because PII needs only the broad classes. A local real-data check on one
+complete SD302 subject processed ten images in 11.58 seconds, matched all ten
+expert broad labels, and reproduced the reference PII of 12; hosted CPU timing
+will depend on the deployment tier and cold-start state.
+
+Every single-image response includes descriptive image-quality and ridge-flow
+features. Automated minutiae totals, core/delta coordinates, and TFRC remain
+withheld until their uploaded-image detectors pass annotation-based validation.
+
 Configure the Vercel project with the backend URL and the same token:
 
 ```text

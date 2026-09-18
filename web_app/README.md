@@ -64,6 +64,21 @@ research inference outside Vercel's synchronous request-duration limit. The
 backend ultimately returns the typed broad/subtype response declared in
 `lib/prediction.ts`.
 
+The analysis interface uses this single-image contract in two ways. A standalone
+prediction reports that finger's pattern-intensity contribution (arch = 0,
+loop = 1, whorl = 2). The ten-finger workflow assigns an image to every finger,
+uploads the files separately to stay within request-size limits, and starts one
+optimized batch job. Each EfficientNet checkpoint is loaded once across the ten
+images rather than once per image. The app calculates
+`PII = loops + (2 × whorls)` only after all ten predictions are available.
+
+Single-image results also include a deterministic quality and ridge-flow panel:
+foreground coverage, ridge contrast, sharpness, local orientation coherence,
+and a ridge-density proxy. The interface explicitly withholds uploaded-image
+minutiae, core/delta, and TFRC values because those detectors have not been
+validated against the available examiner annotations. This is a model-derived
+research summary; it is not identity verification or diagnosis.
+
 Uploaded images are not written to disk by the frontend. A production backend
 must preserve the same transient-processing and no-logging contract.
 

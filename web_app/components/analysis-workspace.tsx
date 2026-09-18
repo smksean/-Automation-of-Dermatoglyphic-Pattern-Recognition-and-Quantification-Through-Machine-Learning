@@ -2,6 +2,7 @@
 
 import {
   AlertTriangle,
+  Calculator,
   CheckCircle2,
   FileImage,
   LoaderCircle,
@@ -15,26 +16,16 @@ import { ChangeEvent, DragEvent, useEffect, useRef, useState } from "react";
 import {
   ApiError,
   broadLabels,
+  patternIntensityContributions,
   PredictionResponse,
   subtypeLabels,
 } from "@/lib/prediction";
+import { PredictionRequestError, requestPrediction } from "@/lib/prediction-client";
+import { TenFingerQuantification } from "@/components/ten-finger-quantification";
+import { FeatureAnalysisPanel } from "@/components/feature-analysis-panel";
 
 const ACCEPTED_TYPES = new Set(["image/png", "image/jpeg", "image/tiff"]);
 const MAX_FILE_BYTES = 4 * 1024 * 1024;
-const POLL_INTERVAL_MS = 2000;
-const MAX_POLL_ATTEMPTS = 120;
-
-type JobSubmission = { jobId: string; status: "queued" | "running" };
-type JobStatus = {
-  status: "queued" | "running" | "complete" | "failed";
-  result?: PredictionResponse;
-  error?: string;
-};
-
-function wait(milliseconds: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
-}
-
 function formatBytes(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
@@ -121,55 +112,15 @@ export function AnalysisWorkspace() {
   async function analyze() {
     if (!file) return;
     setStatus("running");
-    setAnalysisProgress("Submitting fingerprint securely");
     setError(null);
-    const body = new FormData();
-    body.append("image", file);
     try {
-      const response = await fetch("/api/predict", { method: "POST", body });
-      const payload = (await response.json()) as JobSubmission | ApiError;
-      if (!response.ok) {
-        setError(payload as ApiError);
-        setStatus("error");
-        return;
-      }
-      const { jobId } = payload as JobSubmission;
-      setAnalysisProgress("Running two-stage model analysis");
-
-      for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt += 1) {
-        await wait(POLL_INTERVAL_MS);
-        const jobResponse = await fetch(`/api/predict/${jobId}`, { cache: "no-store" });
-        const job = (await jobResponse.json()) as JobStatus | ApiError;
-        if (!jobResponse.ok) {
-          setError(job as ApiError);
-          setStatus("error");
-          return;
-        }
-        const jobStatus = job as JobStatus;
-        if (jobStatus.status === "complete" && jobStatus.result) {
-          setResult(jobStatus.result);
-          setStatus("result");
-          return;
-        }
-        if (jobStatus.status === "failed") {
-          setError({ error: "Analysis request failed.", detail: jobStatus.error });
-          setStatus("error");
-          return;
-        }
-        setAnalysisProgress(
-          jobStatus.status === "queued"
-            ? "Waiting for the inference service"
-            : "Running two-stage model analysis",
-        );
-      }
-
-      setError({
-        error: "Analysis is taking longer than expected.",
-        detail: "Submit the image again after the inference service becomes available.",
-      });
-      setStatus("error");
-    } catch {
-      setError({ error: "Analysis request failed.", detail: "The selected image remains only in this browser session." });
+      const prediction = await requestPrediction(file, setAnalysisProgress);
+      setResult(prediction);
+      setStatus("result");
+    } catch (requestError) {
+      setError(requestError instanceof PredictionRequestError
+        ? { error: requestError.message, detail: requestError.detail }
+        : { error: "Analysis request failed.", detail: "The selected image remains only in this browser session." });
       setStatus("error");
     }
   }
@@ -179,7 +130,7 @@ export function AnalysisWorkspace() {
       <div className="section-heading compact-heading">
         <div>
           <p className="eyebrow">01 / Analysis workspace</p>
-          <h2 id="analysis-title">Classify one rolled fingerprint</h2>
+          <h2 id="analysis-title">Classify one fingerprint or quantify a ten-finger set</h2>
         </div>
         <div className="trust-row">
           <span><LockKeyhole size={16} /> No image retention</span>
@@ -252,6 +203,7 @@ export function AnalysisWorkspace() {
                 <li><span>1</span> Four-class broad prediction</li>
                 <li><span>2</span> Five-fold probability and agreement review</li>
                 <li><span>3</span> Conditional subtype prediction</li>
+                <li><span>4</span> Image quality and ridge-flow feature evidence</li>
               </ol>
             </div>
           ) : (
@@ -265,6 +217,14 @@ export function AnalysisWorkspace() {
                 <div><span>Top-two margin</span><strong>{(result.topTwoMargin * 100).toFixed(1)} pts</strong></div>
                 <div><span>Processing</span><strong>{result.processingSeconds.toFixed(2)} s</strong></div>
               </div>
+              <div className="single-quantification">
+                <Calculator size={22} aria-hidden="true" />
+                <div>
+                  <span>Single-finger intensity contribution</span>
+                  <strong>{patternIntensityContributions[result.predictedClass]} point{patternIntensityContributions[result.predictedClass] === 1 ? "" : "s"}</strong>
+                  <small>Complete PII requires predictions from all ten fingers.</small>
+                </div>
+              </div>
               <ProbabilityList values={result.probabilities} />
               {result.subtype && (
                 <div className="subtype-result">
@@ -273,6 +233,7 @@ export function AnalysisWorkspace() {
                   <ProbabilityList values={result.subtype.probabilities} />
                 </div>
               )}
+              <FeatureAnalysisPanel analysis={result.featureAnalysis} />
               {(result.needsReview || result.subtype?.needsReview) ? (
                 <div className="review-callout"><AlertTriangle size={18} /><span>Qualified review is recommended for this result.</span></div>
               ) : (
@@ -282,6 +243,7 @@ export function AnalysisWorkspace() {
           )}
         </div>
       </div>
+      <TenFingerQuantification />
     </section>
   );
 }
